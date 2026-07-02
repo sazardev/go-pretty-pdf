@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
-	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 func runInit(cmd *cobra.Command, args []string) error {
@@ -22,12 +22,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 		targetDir = args[0]
 	}
 
-	if !quiet {
-		output.PrintBanner(version.Version)
+	if initBare {
+		return runInitBare(targetDir, title, author, themeName, sourceDir, jsonOutput)
 	}
 
 	if jsonOutput {
-		return runInitBare(targetDir)
+		return runInitBare(targetDir, "My Book", "go-pretty-pdf", "default", "book", true)
 	}
 
 	var (
@@ -114,18 +114,20 @@ func runInit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runInitBare(targetDir string) error {
-	sourceDir := "book"
-	bookTitle := "My Book"
-	authorName := "go-pretty-pdf"
-	themeChoice := "default"
-
-	if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, sourceDir); err != nil {
+func runInitBare(targetDir, bookTitle, authorName, themeChoice, srcDir string, json bool) error {
+	if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, srcDir); err != nil {
 		return err
 	}
 
-	fmt.Printf(`{"directory":"%s","book_title":"%s","author":"%s","theme":"%s","source":"%s"}`+"\n",
-		targetDir, bookTitle, authorName, themeChoice, sourceDir)
+	if json {
+		fmt.Printf(`{"directory":"%s","book_title":"%s","author":"%s","theme":"%s","source":"%s"}`+"\n",
+			targetDir, bookTitle, authorName, themeChoice, srcDir)
+	} else {
+		absTarget, _ := filepath.Abs(targetDir)
+		fmt.Println(output.Success(fmt.Sprintf("Project created at %s", absTarget)))
+		fmt.Println("  " + output.MutedStyle.Render("Run:") +
+			" " + output.CodeStyle.Render(fmt.Sprintf("cd %s && pretty-pdf build", targetDir)))
+	}
 	return nil
 }
 
@@ -135,66 +137,36 @@ func scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, sourceDir
 		return fmt.Errorf("creating book directory: %w", err)
 	}
 
-	indexContent := fmt.Sprintf(`---
-id: "[1.0.0]"
-title: "Getting Started"
-subtitle: "A simple introduction"
-tags:
-  - example
-  - intro
-difficulty: "beginner"
-status: complete
-completeness: 100
-depends_on: []
----
+	replacer := strings.NewReplacer(
+		"{{BOOK_TITLE}}", bookTitle,
+		"{{AUTHOR_NAME}}", authorName,
+		"{{THEME}}", themeChoice,
+		"{{SOURCE_DIR}}", sourceDir,
+	)
 
-# Welcome to %s
-
-This is the first chapter, created by **go-pretty-pdf**.
-
-## Overview
-
-Write your content using **MDX** — an extended Markdown format with support
-for custom components and variables.
-
-## Next Steps
-
-- Edit this file to start writing your book
-- Run ` + "`pretty-pdf build --source ./%s --out %s.pdf`" + ` to generate a PDF
-- Run ` + "`pretty-pdf check --source ./%s`" + ` to validate your content
-`, bookTitle, sourceDir, bookTitle, sourceDir)
-
-	indexPath := filepath.Join(bookDir, "index.mdx")
-	if err := os.WriteFile(indexPath, []byte(indexContent), 0644); err != nil {
-		return fmt.Errorf("writing index.mdx: %w", err)
+	assets := []string{
+		"initassets/[1.0.0]-introduction.mdx",
+		"initassets/[1.1.0]-getting-started.mdx",
+		"initassets/[1.1.1]-installation.mdx",
+	}
+	for _, asset := range assets {
+		data, err := initAssets.ReadFile(asset)
+		if err != nil {
+			return fmt.Errorf("reading embedded %s: %w", asset, err)
+		}
+		content := replacer.Replace(string(data))
+		outPath := filepath.Join(bookDir, filepath.Base(asset))
+		if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", outPath, err)
+		}
 	}
 
-	configContent := fmt.Sprintf(`# go-pretty-pdf configuration
-source: "%s"
-output: "out.pdf"
-title: "%s"
-subtitle: ""
-author: "%s"
-
-theme: "%s"
-
-lint:
-  requireFrontmatter:
-    - "id"
-    - "title"
-  noDuplicateIDs: true
-  maxHeadingDepth: 3
-
-vars:
-  BOOK_TITLE: "%s"
-  AUTHOR_NAME: "%s"
-
-render:
-  paper: "a4"
-  timeout: "30s"
-`, sourceDir, bookTitle, authorName, themeChoice, bookTitle, authorName)
-
-	configPath := filepath.Join(targetDir, ".pretty-pdf.yaml")
+	configData, err := initAssets.ReadFile("initassets/go-pretty-pdf.yml")
+	if err != nil {
+		return fmt.Errorf("reading embedded config: %w", err)
+	}
+	configContent := replacer.Replace(string(configData))
+	configPath := filepath.Join(targetDir, "go-pretty-pdf.yml")
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}

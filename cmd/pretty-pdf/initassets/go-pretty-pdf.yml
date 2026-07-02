@@ -1,9 +1,9 @@
-title: "My Book"
+title: "{{BOOK_TITLE}}"
 subtitle: "A Comprehensive Guide"
-author: ""
-source: .
+author: "{{AUTHOR_NAME}}"
+source: {{SOURCE_DIR}}
 output: out.pdf
-theme: default
+theme: {{THEME}}
 
 vars:
   api_version: "v2.1"
@@ -12,7 +12,6 @@ lint:
   require_frontmatter:
     - id
     - title
-  require_id_format: "[X.Y.Z]"
   no_duplicate_ids: true
   max_heading_depth: 3
 
