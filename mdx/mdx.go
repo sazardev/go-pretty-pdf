@@ -125,9 +125,5 @@ func SplitID(id string) []int {
 }
 
 func AnchorID(id string) string {
-	return "section-" + strings.ReplaceAll(id, "[", "")
-}
-
-func AnchorIDRaw(id string) string {
-	return "section-" + id
+	return "section-" + strings.Trim(id, "[]")
 }

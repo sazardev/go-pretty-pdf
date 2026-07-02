@@ -304,6 +304,25 @@ func TestDocumentSortKey(t *testing.T) {
 	}
 }
 
+func TestAnchorID(t *testing.T) {
+	tests := []struct {
+		id     string
+		expect string
+	}{
+		{"[1.0.0]", "section-1.0.0"},
+		{"[10.20.30]", "section-10.20.30"},
+		{"[0.0.0]", "section-0.0.0"},
+		{"1.0.0", "section-1.0.0"},
+		{"", "section-"},
+	}
+	for _, tt := range tests {
+		got := AnchorID(tt.id)
+		if got != tt.expect {
+			t.Errorf("AnchorID(%q) = %q, want %q", tt.id, got, tt.expect)
+		}
+	}
+}
+
 func contains(str, substr string) bool {
 	for i := 0; i <= len(str)-len(substr); i++ {
 		if str[i:i+len(substr)] == substr {
