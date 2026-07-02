@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-02
+
+### Added
+
+- `serve` subcommand: preview MDX as HTML in the browser with live reload
+- `completion` subcommand: generate shell completion scripts (bash, zsh, fish, powershell)
+- `--bare` flag on `init`: minimal non-interactive project scaffolding
+- `--port` flag on `serve`: configure HTTP server port
+- `ValidateAll(docs)` method on `PDF` and `Validator` interface for batch validation
+- `TestAnchorID` test covering bracket-stripping behavior
+- `.component-warning-title` CSS class for `<Warning>` title styling
+- Template placeholders (`{{BOOK_TITLE}}`, `{{AUTHOR_NAME}}`, `{{SOURCE_DIR}}`, `{{THEME}}`) in init scaffold files
+
+### Changed
+
+- `AnchorID` uses `strings.Trim` instead of `strings.ReplaceAll` for bracket removal
+- `PrintValidationSummary` now shows per-file breakdown (passed/errored/warned)
+- `render.DefaultOptions()` drives margin defaults in config instead of hardcoded 0.8
+- `FindConfig` resolves from `os.Getwd()` instead of relative `.`
+- Warning component uses `html.EscapeString` from stdlib instead of custom `escapeHTML`
+
+### Removed
+
+- `AnchorIDRaw` function (unused)
+- `PrintSummary` method from `PipelineProgress` (unused)
+- Deprecated `LintConfig` fields: `RequireIDFormat`, `RequireLowercaseFilenames`, `CheckBrokenLinks`
+- Version banner from `init`, `check`, and `watch` commands (noise reduction)
+- Custom `dirname` helper in render — replaced by `filepath.Dir`
+- Per-doc validation loop in `build.go` — replaced by single `ValidateAll` call
+
+### Fixed
+
+- `url.PathEscape` → `url.QueryEscape` for correct data URI encoding in Chrome rendering
+
 ## [0.1.0] - 2026-07-02
 
 ### Added
