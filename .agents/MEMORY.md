@@ -17,10 +17,13 @@ Raw MDX → substituteVars() ({{var}}) → goldmark parse → Transpile custom c
 ## Package Map
 
 ```
-cmd/pretty-pdf/          CLI entrypoint (cobra) — build, check, init, version
+cmd/pretty-pdf/          CLI entrypoint (cobra) — build, check, init, version, watch
+cmd/pretty-pdf/output/   DX output package: lipgloss styles, spinner, banner, panels, pipeline progress
 config/                  YAML config loader — Config struct, Load(), FindConfig(), Default()
 pdf.go                   Root package prettypdf — New(), Build(), Validate(), 18 functional options
+                         ↑ step-by-step: ParseDir(), ValidateDoc(), ComposeHTML(), Render()
 mdx/                     Parser (goldmark), component transpiler, DefaultValidator, Document type
+                         ↑ partial parsing: ParseFileError, ParseErrors (collect per-file, continue)
 compose/                 HTML composition — template.html + print.css (go:embed), TOC builder
 render/                  Chrome headless PDF rendering via chromedp
 theme/                   Theme struct with Default and Minimal built-in themes
@@ -99,77 +102,100 @@ render:
 
 ### `pretty-pdf build`
 
-Full pipeline: parse → validate → compose → render.
+Animated pipeline: banner → pre-flight → parse (spinner) → validate (spinner) → compose (spinner) → render (spinner) → build summary panel.
 
 Flags:
-| Flag | Type | Overrides config |
-|------|------|-----------------|
-| `--config` | string | — |
-| `--source`, `-s` | string | `cfg.Source` |
-| `--out`, `-o` | string | `cfg.Output` |
-| `--title` | string | `cfg.Title` |
-| `--subtitle` | string | `cfg.Subtitle` |
-| `--author` | string | `cfg.Author` |
-| `--theme` | string | `cfg.Theme` |
-| `--css` | string | `cfg.CSS` |
-| `--template` | string | `cfg.Template` |
-| `--timeout` | string | `cfg.Render.Timeout` |
-| `--verbose`, `-v` | bool | — (no config equivalent) |
+| Flag | Type | Overrides config | Extras |
+|------|------|-----------------|--------|
+| `--config` | string | — | |
+| `--source`, `-s` | string | `cfg.Source` | |
+| `--out`, `-o` | string | `cfg.Output` | |
+| `--title` | string | `cfg.Title` | |
+| `--subtitle` | string | `cfg.Subtitle` | |
+| `--author` | string | `cfg.Author` | |
+| `--theme` | string | `cfg.Theme` | |
+| `--css` | string | `cfg.CSS` | |
+| `--template` | string | `cfg.Template` | |
+| `--timeout` | string | `cfg.Render.Timeout` | |
+| `--verbose`, `-v` | bool | — | |
+| `--json` | bool | — | silent JSON output |
+| `--no-color` | bool | — | ASCII-only output |
+| `--quiet` | bool | — | suppress config display |
 
-**Flow** (`main.go:270`):
+**Flow** (`build.go:19`):
 ```
 runBuild()
-  → loadConfig(cmd)                    # main.go:111
-      → config.Default()               # start with code defaults
-      → cfgFile ? Load(cfgFile) : FindConfig() + Load()
-      → resolve CSS/template paths (config dir or filepath.Abs)
-      → CLI flag overrides (if cmd.Flags().Changed("flag"))
-      → verbose warnings for missing CSS/template files
-      → return cfg
-  → buildOpts(cfg)                     # main.go:195
-      → WithVerbose(verbose)
-      → WithConfig(cfg)
-      → WithConfigCSSAndTemplate(cfg)
-      → WithVars(cfg.Vars)             # if vars exist
-      → WithValidator(DefaultValidator configured from cfg.Lint)
-      → WithTheme(theme.X)             # if cfg.Theme != "default"
-      → WithTimeout(d)                 # if cfg.Render.Timeout set
-      → WithPaperSize(w, h)            # a4/letter/legal from cfg.Render.Paper
-      → WithRenderMargins(t,b,l,r)     # parsed from CSS-unit strings (mm,cm,in,pt,px)
-      → WithHeaderTitle(cfg.Render.HeaderTitle)
-  → prettypdf.New(opts...)
-  → pdf.Build(ctx)
-  → "PDF generated: out.pdf"
+  → output.NoColor() if --no-color
+  → output.PrintBanner(version)          # ASCII art "GO → PDF"
+  → runPreFlight(cfg)                    # check Chrome, source, output, CSS, template
+  → output.PrintPreFlight(results)       # ✓/✗ per check
+  → abort if any non-warning failure
+  → NewPipelineProgress(4 steps)
+  → for each step: Start (spinner) → work → Done/Fail
+  → output.PrintBuildSummary(BuildStats)  # styled panel
+```
+
+Pre-flight checks (runPreFlight, `build.go:198`):
+- Chrome/Chromium available (calls `render.CheckChromeAvailable()`)
+- Source directory exists + has .mdx files
+- Output directory writable (auto-creates if needed)
+- CSS file exists (if configured, warning on fail)
+- Template file exists (if configured, warning on fail)
+
+**Step-by-step API** (`pdf.go`):
+```
+pdf.ParseDir()       → []*mdx.Document, error (partial: docs + err list)
+pdf.ValidateDoc(doc) → []mdx.ValidationError (runs DefaultValidator per doc)
+pdf.ComposeHTML(docs)→ string (HTML), error
+pdf.Render(html)     → error (headless Chrome)
 ```
 
 ### `pretty-pdf check`
 
-Parse + validate only (no compose/render). Uses `DefaultValidator`.
+Styled validation: spinner for parsing → results panel.
 
-Flags: `--config`, `--source`, `--strict`, `--verbose`
+Flags: `--config`, `--source`, `--strict`, `--verbose`, `--json`, `--no-color`
 
 - `--strict`: promotes heading depth warnings to errors
 - `--verbose`: prints warnings during config loading
 
-Output format: `[WARN]` / `[ERROR]` per finding, summary `N error(s), M warning(s)`.
+Output: colored summary `N error(s), M warning(s)` via `PrintValidationSummary`.
 Exit code 1 if errors > 0.
 
 ### `pretty-pdf init [dir]`
 
-Scaffolds a new book directory with embedded assets (`cmd/pretty-pdf/initassets/*`).
-Default dir: `book`.
+**Interactive mode** (default): huh form wizard asking for title, author, theme (default/minimal), source dir, confirms before scaffolding.
 
-Creates:
+**JSON/bare mode** (`--json`): scaffold with all defaults, no prompts.
+
+Scaffolds:
 - `go-pretty-pdf.yml` (default config)
 - `[1.0.0]-introduction.mdx`
 - `[1.1.0]-getting-started.mdx`
-- `[1.1.1]-installation.mdx` (has `{{product}}` / `{{company}}` variable example)
+- `[1.1.1]-installation.mdx` (has `{{product}}` / `{{company}}` var example)
 
 Fails if target directory already exists.
+
+### `pretty-pdf watch`
+
+fsnotify recursive watcher. 300ms debounce. Animated banners per rebuild.
+
+Ctrl+C handler prints summary panel (builds, errors, last build time).
+
+Flags: same as `build` + `--config`.
 
 ### `pretty-pdf version`
 
 Prints `pretty-pdf <version>`. Version defaults to `"dev"`, override with `-ldflags "-X main.version=X.Y.Z"`.
+
+### Global Flags
+
+| Flag | Affects |
+|------|---------|
+| `--json` | build, check, init — silent structured output |
+| `--no-color` | all — ASCII-only (tearmenv.Ascii) |
+| `--quiet` | build — suppress config info display |
+| `--verbose`, `-v` | all |
 
 ---
 
@@ -224,6 +250,7 @@ New(opts...)
 
 ```
 parser.ParseDir(sourceDir)                  # walk .mdx files, parse, transpile, sort by [X.Y.Z]
+  → if errors: log partial failures, continue with valid docs
   → if validator: validator.ValidateAll(docs)
   → compose.ComposeHTML(docs, composeOpts)   # TOC + template + CSS
   → render.RenderToPDF(html, output, renderOpts)  # headless Chrome
@@ -235,6 +262,23 @@ parser.ParseDir(sourceDir)                  # walk .mdx files, parse, transpile,
 parser.ParseDir(sourceDir)
   → if validator: validator.ValidateAll(docs)
   → return errors (no compose/render)
+```
+
+### Step-by-step API (added in DX overhaul)
+
+```
+pdf.ParseDir()       →  ([]*mdx.Document, error)
+  Delegates to parser.ParseDir, returns partial docs + ParseErrors.
+  Suppresses frontmatter-not-found per-file (not an error).
+
+pdf.ValidateDoc(doc) →  []mdx.ValidationError
+  Runs pdf.validator.Validate(doc) if set.
+
+pdf.ComposeHTML(docs)→  (string, error)
+  Delegates to compose.ComposeHTML(docs, pdf.composeOpts).
+
+pdf.Render(html)     →  error
+  Delegates to render.RenderToPDF with configured opts.
 ```
 
 ---
@@ -381,7 +425,7 @@ go test ./config/... -v          # Config defaults (1), Load (1), partial defaul
 |---------|-----------|------|
 | `mdx/` | 9 | Component transpile (6), ParseFile (1), ParseDir (1), SortKey (1) |
 | `mdx/` (validator) | 6 | DefaultValidator (4), ValidateAll/duplicates (1), heading depth/strict (1) |
-| `mdx/` (vars) | 2 | Vars substitution in text, Vars with components |
+| `mdx/` (vars + partial parse) | 3 | Vars substitution (1), vars with components (1), partial parse errors (1) |
 | `config/` | 4 | Default(), Load(), LoadDefaultsOnMissingKeys(), FindConfig() |
 
 ---
@@ -390,12 +434,22 @@ go test ./config/... -v          # Config defaults (1), Load (1), partial defaul
 
 | File | Lines | Role |
 |------|-------|------|
-| `cmd/pretty-pdf/main.go` | 429 | CLI: 4 commands, `loadConfig()`, `buildOpts()`, `parseCSSUnit()`, embedded init assets |
+| `cmd/pretty-pdf/main.go` | ~110 | Thin cobra entry — global vars, root/builtin/version/cmd/watcher commands |
+| `cmd/pretty-pdf/config.go` | ~120 | `loadConfig()`, `buildOpts()`, `parseCSSUnit()`, `validatorFromConfig()`, `parserFromConfig()` |
+| `cmd/pretty-pdf/build.go` | ~332 | `runBuild()` animated pipeline, `runBuildJSON()`, `runPreFlight()`, `countMDXFiles()`, `formatBytes()` |
+| `cmd/pretty-pdf/check.go` | ~100 | `runCheck()` styled validation with spinner + summary panel |
+| `cmd/pretty-pdf/init.go` | ~160 | `runInit()` huh interactive wizard, `runInitBare()` JSON mode, `scaffoldWithConfig()` |
+| `cmd/pretty-pdf/watch.go` | ~140 | `runWatch()` fsnotify recursive watcher with debounce + stats |
+| `cmd/pretty-pdf/output/styles.go` | ~120 | Lipgloss styles: colors, symbols, Panel/Success/Error/Warn/Info helpers, `NoColor()` |
+| `cmd/pretty-pdf/output/spinner.go` | ~60 | Animated goroutine spinner with `ack` channel sync |
+| `cmd/pretty-pdf/output/banner.go` | ~30 | ASCII art "GO → PDF" banner |
+| `cmd/pretty-pdf/output/panels.go` | ~110 | `BuildStats`, `PrintBuildSummary`, `PrintValidationSummary`, `PreFlightResult`, `PrintPreFlight` |
+| `cmd/pretty-pdf/output/progress.go` | ~165 | `PipelineProgress` (Start/Done/Fail/Skip/PrintSummary), `WatchStats`, `PrintWatchBanner/Rebuild/Summary` |
 | `cmd/pretty-pdf/initassets/*` | 4 files | Scaffold templates for `init` command |
-| `pdf.go` | ~190 | Root API, 18 options, Build/Validate pipeline, WithComponent fix |
+| `pdf.go` | ~220 | Root API, 18 options, Build/Validate pipeline, step-by-step methods, WithComponent fix |
 | `config/config.go` | 82 | Config struct, YAML Load(), FindConfig(), Default() |
 | `config/config_test.go` | 145 | 4 config tests |
-| `mdx/parser.go` | ~155 | Goldmark parser, variable substitution, RegisterComponent |
+| `mdx/parser.go` | ~210 | Goldmark parser, variable substitution, RegisterComponent, `ParseFileError`, `ParseErrors` |
 | `mdx/validator.go` | ~105 | DefaultValidator with 4 lint rules |
 | `mdx/validator_test.go` | ~252 | Validator + variable tests |
 | `mdx/mdx.go` | 133 | Document type, frontmatter accessors, ID utilities |
@@ -419,6 +473,13 @@ go test ./config/... -v          # Config defaults (1), Load (1), partial defaul
 ```
 github.com/chromedp/cdproto              Chrome DevTools Protocol types
 github.com/chromedp/chromedp              Chrome headless automation
+github.com/charmbracelet/lipgloss         CLI styling (colors, panels, formatting)
+github.com/charmbracelet/huh              Interactive form UI (init wizard)
+github.com/charmbracelet/bubbles          Bubble tea components (spinner frames)
+github.com/charmbracelet/bubbletea        TUI framework (huh dependency)
+github.com/fsnotify/fsnotify              File system watcher (watch mode)
+github.com/mattn/go-isatty                Terminal detection (lipgloss dep)
+github.com/muesli/termenv                 Terminal profiles, ASCII fallback (NoColor)
 github.com/spf13/cobra                    CLI framework
 github.com/spf13/pflag                    Flag parsing (cobra dep)
 github.com/yuin/goldmark                 Markdown parser
@@ -439,3 +500,8 @@ gopkg.in/yaml.v3                          YAML config file parsing
 7. **`WithComponent` appends** (no longer replaces parser)
 8. **Config without CSS/Template fields** → uses embedded assets or theme
 9. **Source default** is `"book"` (not CWD) — aligns with `init` scaffold
+10. **Spinner deadlock fixed**: `Done()`/`Fail()` used `<-s.result` but goroutine never sent. Replaced with `ack` channel — goroutine closes `ack` on exit (via defer), `Done`/`Fail` wait on `<-s.ack` before printing
+11. **`.gitignore` `pretty-pdf` pattern** was too broad (matched `cmd/pretty-pdf/` dir). Fixed to `/pretty-pdf` (root-anchored only)
+12. **Pre-flight order**: Chrome check first (hard failure), then source/output/CSS/template (warnings can pass)
+13. **Partial parsing**: `ParseDir`/`ParseAll` never abort on per-file errors. Returns partial docs + `ParseErrors`. Caller decides whether to continue. Frontmatter-not-found logged as debug-level, not error
+14. **Watch mode debounce**: 300ms debounce via `time.AfterFunc`. Subsequent events within window reset the timer. Prevents double-builds on editor save (fsnotify fires multiple events per save)
