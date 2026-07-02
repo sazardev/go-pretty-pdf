@@ -16,6 +16,31 @@ import (
 	meta "github.com/yuin/goldmark-meta"
 )
 
+type ParseFileError struct {
+	File string
+	Err  error
+}
+
+func (e ParseFileError) Error() string {
+	return fmt.Sprintf("%s: %v", e.File, e.Err)
+}
+
+func (e ParseFileError) Unwrap() error {
+	return e.Err
+}
+
+type ParseErrors []ParseFileError
+
+func (pe ParseErrors) Error() string {
+	if len(pe) == 0 {
+		return ""
+	}
+	if len(pe) == 1 {
+		return pe[0].Error()
+	}
+	return fmt.Sprintf("%d file(s) failed to parse (first: %v)", len(pe), pe[0])
+}
+
 type Parser struct {
 	md         goldmark.Markdown
 	components *ComponentRegistry
@@ -90,15 +115,25 @@ func (p *Parser) ParseDir(dir string) ([]*Document, error) {
 	}
 
 	var docs []*Document
+	var parseErrs ParseErrors
+
 	for _, file := range files {
 		doc, err := p.ParseFile(file)
 		if err != nil {
-			return nil, err
+			parseErrs = append(parseErrs, ParseFileError{File: file, Err: err})
+			continue
 		}
 		docs = append(docs, doc)
 	}
 
 	sortDocuments(docs)
+
+	if len(parseErrs) > 0 {
+		if len(docs) == 0 {
+			return nil, parseErrs
+		}
+		return docs, parseErrs
+	}
 
 	return docs, nil
 }
@@ -135,14 +170,26 @@ func (p *Parser) ParseFile(path string) (*Document, error) {
 
 func (p *Parser) ParseAll(paths []string) ([]*Document, error) {
 	var docs []*Document
+	var parseErrs ParseErrors
+
 	for _, path := range paths {
 		doc, err := p.ParseFile(path)
 		if err != nil {
-			return nil, err
+			parseErrs = append(parseErrs, ParseFileError{File: path, Err: err})
+			continue
 		}
 		docs = append(docs, doc)
 	}
+
 	sortDocuments(docs)
+
+	if len(parseErrs) > 0 {
+		if len(docs) == 0 {
+			return nil, parseErrs
+		}
+		return docs, parseErrs
+	}
+
 	return docs, nil
 }
 

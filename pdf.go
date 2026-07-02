@@ -212,8 +212,11 @@ func (p *PDF) Build(ctx context.Context) error {
 	}
 
 	docs, err := p.parser.ParseDir(p.sourceDir)
-	if err != nil {
+	if err != nil && len(docs) == 0 {
 		return fmt.Errorf("parsing: %w", err)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: some files failed to parse: %v\n", err)
 	}
 
 	if p.verbose {
@@ -267,6 +270,25 @@ func (p *PDF) Validate(ctx context.Context) ([]mdx.ValidationError, error) {
 	}
 
 	return allErrs, nil
+}
+
+func (p *PDF) ParseDir() ([]*mdx.Document, error) {
+	return p.parser.ParseDir(p.sourceDir)
+}
+
+func (p *PDF) ValidateDoc(doc *mdx.Document) []mdx.ValidationError {
+	if p.validator == nil {
+		return nil
+	}
+	return p.validator.Validate(doc)
+}
+
+func (p *PDF) ComposeHTML(docs []*mdx.Document) (string, error) {
+	return compose.ComposeHTML(docs, p.composeOpts)
+}
+
+func (p *PDF) Render(html string) error {
+	return render.RenderToPDF(html, p.outputFile, p.renderOpts)
 }
 
 func (p *PDF) logVerbose(msg string) {
