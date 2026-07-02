@@ -25,12 +25,9 @@ type Config struct {
 }
 
 type LintConfig struct {
-	RequireFrontmatter        []string `yaml:"require_frontmatter"`
-	RequireIDFormat           string   `yaml:"require_id_format"`
-	NoDuplicateIDs            bool     `yaml:"no_duplicate_ids"`
-	MaxHeadingDepth           int      `yaml:"max_heading_depth"`
-	RequireLowercaseFilenames bool     `yaml:"require_lowercase_filenames"`
-	CheckBrokenLinks          bool     `yaml:"check_broken_links"`
+	RequireFrontmatter []string `yaml:"require_frontmatter"`
+	NoDuplicateIDs     bool     `yaml:"no_duplicate_ids"`
+	MaxHeadingDepth    int      `yaml:"max_heading_depth"`
 }
 
 type RenderConfig struct {
@@ -70,13 +67,20 @@ func Load(path string) (*Config, error) {
 }
 
 func FindConfig() (string, error) {
-	path := filepath.Join(".", DefaultConfigFile)
-	if _, err := os.Stat(path); err == nil {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return path, nil
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		path := filepath.Join(dir, DefaultConfigFile)
+		if _, err := os.Stat(path); err == nil {
+			return filepath.Abs(path)
 		}
-		return abs, nil
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
 	}
 	return "", nil
 }

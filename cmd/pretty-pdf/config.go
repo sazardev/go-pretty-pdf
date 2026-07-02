@@ -12,6 +12,7 @@ import (
 	prettypdf "github.com/sazardev/go-pretty-pdf"
 	"github.com/sazardev/go-pretty-pdf/config"
 	"github.com/sazardev/go-pretty-pdf/mdx"
+	"github.com/sazardev/go-pretty-pdf/render"
 	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
@@ -139,22 +140,23 @@ func buildOpts(cfg *config.Config) []prettypdf.Option {
 		}
 	}
 
+	defOpts := render.DefaultOptions()
 	mt := parseCSSUnit(renderCfg.MarginTop)
 	mb := parseCSSUnit(renderCfg.MarginBot)
 	ml := parseCSSUnit(renderCfg.MarginLeft)
 	mr := parseCSSUnit(renderCfg.MarginRight)
 	if mt != 0 || mb != 0 || ml != 0 || mr != 0 {
 		if mt == 0 {
-			mt = 0.8
+			mt = defOpts.MarginTop
 		}
 		if mb == 0 {
-			mb = 0.8
+			mb = defOpts.MarginBottom
 		}
 		if ml == 0 {
-			ml = 0.6
+			ml = defOpts.MarginLeft
 		}
 		if mr == 0 {
-			mr = 0.6
+			mr = defOpts.MarginRight
 		}
 		opts = append(opts, prettypdf.WithRenderMargins(mt, mb, ml, mr))
 	}
