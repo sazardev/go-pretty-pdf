@@ -505,3 +505,63 @@ gopkg.in/yaml.v3                          YAML config file parsing
 12. **Pre-flight order**: Chrome check first (hard failure), then source/output/CSS/template (warnings can pass)
 13. **Partial parsing**: `ParseDir`/`ParseAll` never abort on per-file errors. Returns partial docs + `ParseErrors`. Caller decides whether to continue. Frontmatter-not-found logged as debug-level, not error
 14. **Watch mode debounce**: 300ms debounce via `time.AfterFunc`. Subsequent events within window reset the timer. Prevents double-builds on editor save (fsnotify fires multiple events per save)
+
+---
+
+## CI/CD Pipeline
+
+### GitHub Actions
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| **CI** | `.github/workflows/ci.yml` | Push/PR to `main` |
+| **Release** | `.github/workflows/release.yml` | Tag `v*` pushed |
+
+### CI Jobs (parallel)
+
+- **lint** — `golangci-lint` with 15 linters (5m timeout)
+- **test** — `go test -race -coverprofile` on ubuntu, macOS, windows (fail-fast: false)
+- **vet** — `go vet ./...`
+- **build** — `go build -ldflags="-s -w"`
+
+### Release Pipeline
+
+```
+tag v* → test (matrix) → goreleaser (linux/darwin/windows amd64+arm64) → GitHub Release + changelog + checksums
+```
+
+### Linters (`./golangci.yml`)
+
+`bodyclose`, `errcheck`, `goconst`, `gofmt`, `goimports`, `gosimple`, `govet` (all except fieldalignment), `ineffassign`, `misspell`, `nilerr`, `prealloc`, `staticcheck`, `tenv`, `unconvert`, `unused`
+
+### Release Automation (`./goreleaser.yml`)
+
+- Builds: linux (amd64/arm64), darwin (amd64/arm64), windows (amd64)
+- ldflags: `-X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version={{ .Version }}`
+- Archives: `tar.gz` (unix), `zip` (windows)
+- Changelog: auto, excludes docs/test/chore/merge
+- Checksums: `checksums.txt`
+
+### Makefile (local dev)
+
+| Target | Command |
+|--------|---------|
+| `make lint` | `golangci-lint run --timeout=5m` |
+| `make test` | `go test -race ./...` |
+| `make test-verbose` | `go test -race -v ./...` |
+| `make test-cover` | test + HTML coverage report |
+| `make build` | build `bin/pretty-pdf` with git version |
+| `make build-release` | build + echo version |
+| `make release-dry-run` | goreleaser --snapshot --skip=publish |
+| `make clean` | rm bin/, coverage.out, coverage.html, out.pdf |
+
+### Version Injection
+
+Version comes from `git describe --tags --always --dirty`. The `var version = "dev"` in `cmd/pretty-pdf/main.go:17` is overridden at build time via `-ldflags "-X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version=<version>"`. This works in:
+- GitHub Actions CI (`go build -ldflags="-s -w"`)
+- goreleaser (`ldflags` in `.goreleaser.yml`)
+- Makefile (`make build` reads git describe)
+
+### `.gitignore` Updates
+
+Added `bin/`, `coverage.out`, `coverage.html`

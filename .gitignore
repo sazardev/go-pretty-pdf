@@ -12,8 +12,15 @@
 /pretty-pdf
 /pretty-pdf.exe
 
+# Build output
+/bin/
+
 # Output directories
 examples/output/
+
+# Coverage
+coverage.out
+coverage.html
 
 # Go workspace
 go.work

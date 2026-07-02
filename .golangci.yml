@@ -1,0 +1,41 @@
+run:
+  timeout: 5m
+  go: "1.26"
+
+linters:
+  enable:
+    - bodyclose
+    - errcheck
+    - goconst
+    - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - prealloc
+    - staticcheck
+    - tenv
+    - unconvert
+    - unused
+
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+  goimports:
+    local-prefixes: github.com/sazardev/go-pretty-pdf
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-dirs:
+    - bin
+    - examples
