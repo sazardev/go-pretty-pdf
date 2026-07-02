@@ -21,15 +21,13 @@ func (e ValidationError) Error() string {
 
 type Validator interface {
 	Validate(doc *Document) []ValidationError
+	ValidateAll(docs []*Document) []ValidationError
 }
 
 type DefaultValidator struct {
-	RequireFrontmatter        []string
-	RequireIDFormat           string
-	NoDuplicateIDs            bool
-	MaxHeadingDepth           int
-	RequireLowercaseFilenames bool
-	CheckBrokenLinks          bool
+	RequireFrontmatter []string
+	NoDuplicateIDs     bool
+	MaxHeadingDepth    int
 }
 
 func NewDefaultValidator() *DefaultValidator {

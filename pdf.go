@@ -283,6 +283,13 @@ func (p *PDF) ValidateDoc(doc *mdx.Document) []mdx.ValidationError {
 	return p.validator.Validate(doc)
 }
 
+func (p *PDF) ValidateAll(docs []*mdx.Document) []mdx.ValidationError {
+	if p.validator == nil {
+		return nil
+	}
+	return p.validator.ValidateAll(docs)
+}
+
 func (p *PDF) ComposeHTML(docs []*mdx.Document) (string, error) {
 	return compose.ComposeHTML(docs, p.composeOpts)
 }

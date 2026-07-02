@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
-	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -20,7 +19,6 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	if !quiet {
-		output.PrintBanner(version.Version)
 		lintMode := "lenient"
 		if strict {
 			lintMode = "strict"
@@ -60,8 +58,13 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	docFiles := make([]string, len(docs))
+	for i, d := range docs {
+		docFiles[i] = d.Path
+	}
+
 	if !quiet {
-		output.PrintValidationSummary(errs, warnings)
+		output.PrintValidationSummary(errs, warnings, docFiles)
 	} else {
 		if errors > 0 {
 			for _, e := range errs {

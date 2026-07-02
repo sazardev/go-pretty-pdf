@@ -12,7 +12,6 @@ import (
 	prettypdf "github.com/sazardev/go-pretty-pdf"
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
 	"github.com/sazardev/go-pretty-pdf/config"
-	"github.com/sazardev/go-pretty-pdf/mdx"
 	"github.com/sazardev/go-pretty-pdf/render"
 	"github.com/sazardev/go-pretty-pdf/version"
 )
@@ -88,11 +87,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	}
 
 	pipeline.Start("Running validation...")
-	var allErrs []mdx.ValidationError
-	for _, doc := range docs {
-		errs := pdf.ValidateDoc(doc)
-		allErrs = append(allErrs, errs...)
-	}
+	allErrs := pdf.ValidateAll(docs)
 	if len(allErrs) > 0 {
 		for _, e := range allErrs {
 			fmt.Printf("    %s\n", e)
@@ -163,11 +158,7 @@ func runBuildJSON(cmd *cobra.Command) error {
 		fmt.Fprintf(os.Stderr, "Warning: some files failed to parse: %v\n", err)
 	}
 
-	var allErrs []mdx.ValidationError
-	for _, doc := range docs {
-		errs := pdf.ValidateDoc(doc)
-		allErrs = append(allErrs, errs...)
-	}
+	allErrs := pdf.ValidateAll(docs)
 	if len(allErrs) > 0 {
 		for _, e := range allErrs {
 			fmt.Fprintf(os.Stderr, "%s\n", e)
