@@ -86,24 +86,6 @@ func (pp *PipelineProgress) Skip(stepName string, reason string) {
 	}
 }
 
-func (pp *PipelineProgress) PrintSummary() {
-	fmt.Println()
-	fmt.Println("  " + HeadingStyle.Render("Pipeline"))
-
-	for _, s := range pp.steps {
-		statusIcon := getStatusIcon(s.Status)
-		line := fmt.Sprintf("  %s %s", statusIcon, s.Name)
-		if s.Duration > 0 {
-			line += "  " + MutedStyle.Render(s.Duration.Round(time.Millisecond).String())
-		}
-		if s.Error != "" {
-			line += "\n     " + ErrorStyle.Render("→ "+s.Error)
-		}
-		fmt.Println(line)
-	}
-	fmt.Println()
-}
-
 func getStatusIcon(status StepStatus) string {
 	switch status {
 	case StepDone:
