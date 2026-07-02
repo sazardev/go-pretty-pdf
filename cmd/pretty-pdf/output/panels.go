@@ -35,38 +35,47 @@ func PrintBuildSummary(stats BuildStats) {
 	fmt.Println(Panel("Build Complete!", strings.Join(lines, "\n")))
 }
 
-func PrintValidationSummary(errs []mdx.ValidationError, warnings int) {
-	if len(errs) == 0 && warnings == 0 {
-		fmt.Println(Success("All checks passed!"))
-		return
-	}
-
-	errors := len(errs) - warnings
-
-	fmt.Println()
-
+func PrintValidationSummary(errs []mdx.ValidationError, warnings int, docFiles []string) {
+	failedFiles := make(map[string]bool)
+	warnFiles := make(map[string]bool)
 	for _, e := range errs {
-		prefix := ErrorSymbol
-		style := ErrorStyle
-
 		if e.Field == "content" {
-			prefix = WarningSymbol
-			style = WarningStyle
+			warnFiles[e.File] = true
+		} else {
+			failedFiles[e.File] = true
 		}
-
-		fmt.Printf("  %s %s: %s\n", prefix, FilePathStyle.Render(e.File), style.Render(e.Message))
 	}
+
+	passed := 0
+	errored := 0
+	warned := 0
 
 	fmt.Println()
-
-	summary := KeyValue("Errors", NumberStyle.Render(fmt.Sprintf("%d", errors))) + "  " +
-		KeyValue("Warnings", NumberStyle.Render(fmt.Sprintf("%d", warnings)))
-
-	if errors > 0 {
-		fmt.Println(Panel("Validation Failed", summary))
-	} else {
-		fmt.Println(Panel("Check Passed with Warnings", summary))
+	for _, f := range docFiles {
+		if failedFiles[f] {
+			fmt.Printf("  %s %s\n", ErrorSymbol, FilePathStyle.Render(f))
+			errored++
+		} else if warnFiles[f] {
+			for _, e := range errs {
+				if e.File == f && e.Field == "content" {
+					fmt.Printf("  %s %s — %s\n", WarningSymbol, FilePathStyle.Render(f), WarningStyle.Render(e.Message))
+				}
+			}
+			warned++
+		} else {
+			fmt.Printf("  %s %s\n", SuccessSymbol, FilePathStyle.Render(f))
+			passed++
+		}
 	}
+
+	total := len(docFiles)
+	fmt.Println()
+	fmt.Println(Panel("Check Results",
+		KeyValue("Files", NumberStyle.Render(fmt.Sprintf("%d", total)))+"\n"+
+			KeyValue("Passed", SuccessStyle.Render(fmt.Sprintf("%d", passed)))+"\n"+
+			KeyValue("Warnings", WarningStyle.Render(fmt.Sprintf("%d", warned)))+"\n"+
+			KeyValue("Errors", ErrorStyle.Render(fmt.Sprintf("%d", errored))),
+	))
 }
 
 type PreFlightResult struct {
