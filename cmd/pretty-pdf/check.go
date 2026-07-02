@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -19,7 +20,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	if !quiet {
-		output.PrintBanner(version)
+		output.PrintBanner(version.Version)
 		lintMode := "lenient"
 		if strict {
 			lintMode = "strict"

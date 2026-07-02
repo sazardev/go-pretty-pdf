@@ -9,7 +9,7 @@ builds:
     binary: pretty-pdf
     ldflags:
       - -s -w
-      - -X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version={{ .Version }}
+      - -X github.com/sazardev/go-pretty-pdf/version.Version={{ .Version }}
     env:
       - CGO_ENABLED=0
     goos:

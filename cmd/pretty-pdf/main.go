@@ -9,12 +9,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 //go:embed initassets/*
 var initAssets embed.FS
-
-var version = "dev"
 
 var (
 	cfgFile    string
@@ -79,7 +78,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(output.PrimaryStyle.Render("go-pretty-pdf") + " " + output.MutedStyle.Render("v"+version))
+		fmt.Println(output.PrimaryStyle.Render("go-pretty-pdf") + " " + output.MutedStyle.Render("v"+version.Version))
 	},
 }
 

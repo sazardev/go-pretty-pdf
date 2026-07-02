@@ -12,6 +12,7 @@ import (
 
 	prettypdf "github.com/sazardev/go-pretty-pdf"
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 func runWatch(cmd *cobra.Command, args []string) error {
@@ -25,7 +26,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	}
 
 	if !quiet {
-		output.PrintBanner(version)
+		output.PrintBanner(version.Version)
 		fmt.Println("  " + output.KeyValue("Watching", cfg.Source))
 		fmt.Println("  " + output.KeyValue("Output", cfg.Output))
 	}

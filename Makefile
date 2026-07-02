@@ -2,37 +2,107 @@ GOCMD      = go
 MAIN       = ./cmd/pretty-pdf
 BINARY     = pretty-pdf
 BUILD_DIR  = bin
-VERSION    = $(shell git describe --tags --always --dirty 2>nul || echo dev)
-LDFLAGS    = -s -w -X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version=$(VERSION)
+GOOS       = $(shell $(GOCMD) env GOOS)
+VERSION    = $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+LDFLAGS    = -s -w -X github.com/sazardev/go-pretty-pdf/version.Version=$(VERSION)
+LDFLAGS_NO_STRIP = -X github.com/sazardev/go-pretty-pdf/version.Version=$(VERSION)
 
-.PHONY: lint test test-verbose test-cover build build-release clean
+.PHONY: help lint test test-verbose test-cover build build-release install clean fmt tidy vulncheck \
+        bump-patch bump-minor bump-major release-dry-run version-info
 
-lint:
-	golangci-lint run --timeout=5m
+.DEFAULT_GOAL := help
 
-test:
-	$(GOCMD) test -race ./...
+##@ Development
 
-test-verbose:
-	$(GOCMD) test -race -v ./...
+help: ## Show this help
+	@echo "go-pretty-pdf Makefile"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make [target]"
+	@echo ""
+	@echo "Targets:"
+	@perl -nle '$$_=~/^([a-zA-Z_-]+):.*?##\s*(.*)/ and printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2' $(MAKEFILE_LIST)
 
-test-cover:
-	$(GOCMD) test -race -coverprofile=coverage.out ./...
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
+lint: ## Run golangci-lint
+	@golangci-lint run --timeout=5m
 
-build:
-	if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
-	$(GOCMD) build -ldflags="$(LDFLAGS)" -o "$(BUILD_DIR)\$(BINARY)" $(MAIN)
+fmt: ## Format Go code
+	@$(GOCMD) fmt ./...
 
-build-release:
-	if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
-	$(GOCMD) build -ldflags="$(LDFLAGS)" -o "$(BUILD_DIR)\$(BINARY)" $(MAIN)
+tidy: ## Tidy module dependencies
+	@$(GOCMD) mod tidy
 
-release-dry-run:
-	goreleaser release --clean --skip=publish --snapshot
+vulncheck: ## Run govulncheck
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
-clean:
-	if exist "$(BUILD_DIR)" rmdir /s /q "$(BUILD_DIR)"
-	if exist coverage.out del /q coverage.out
-	if exist coverage.html del /q coverage.html
-	if exist out.pdf del /q out.pdf
+test: ## Run tests with race detector
+	@$(GOCMD) test -race ./...
+
+test-verbose: ## Run tests with verbose output
+	@$(GOCMD) test -race -v ./...
+
+test-cover: ## Run tests with coverage report
+	@$(GOCMD) test -race -coverprofile=coverage.out ./...
+	@$(GOCMD) tool cover -html=coverage.out -o coverage.html
+	@$(GOCMD) tool cover -func=coverage.out
+	@echo ""
+	@echo "Coverage report: coverage.html"
+
+##@ Build
+
+build: ## Build binary (dev)
+	@mkdir -p $(BUILD_DIR)
+	$(GOCMD) build -ldflags="$(LDFLAGS)" -o "$(BUILD_DIR)/$(BINARY)$(if $(filter windows,$(GOOS)),.exe)" $(MAIN)
+	@echo "Built: $(BUILD_DIR)/$(BINARY)$(if $(filter windows,$(GOOS)),.exe) ($(VERSION))"
+
+build-release: ## Build stripped binary
+	@mkdir -p $(BUILD_DIR)
+	$(GOCMD) build -ldflags="$(LDFLAGS)" -o "$(BUILD_DIR)/$(BINARY)$(if $(filter windows,$(GOOS)),.exe)" $(MAIN)
+	@echo "Release build: $(BUILD_DIR)/$(BINARY)$(if $(filter windows,$(GOOS)),.exe) ($(VERSION))"
+
+install: ## Install binary to GOPATH/bin
+	@$(GOCMD) install -ldflags="$(LDFLAGS)" $(MAIN)
+	@echo "Installed: $(shell go env GOPATH)/bin/$(BINARY)"
+
+##@ Versioning
+
+version-info: ## Print current version info
+	@echo "Version: $(VERSION)"
+	@echo "Module:  github.com/sazardev/go-pretty-pdf"
+	@echo "Source:  version/version.go"
+
+bump-patch: ## Bump patch version (x.y.Z)
+	@$(eval NEW_VER := $(shell $(GOCMD) run ./scripts/bump/bump.go patch))
+	@echo "Bumped to $(NEW_VER)"
+	@git add version/version.go
+	@git commit -m "chore: bump version to $(NEW_VER)"
+	@git tag -a "v$(NEW_VER)" -m "v$(NEW_VER)"
+	@echo "Tagged v$(NEW_VER). Run 'git push --tags' to trigger release."
+
+bump-minor: ## Bump minor version (x.Y.z)
+	@$(eval NEW_VER := $(shell $(GOCMD) run ./scripts/bump/bump.go minor))
+	@echo "Bumped to $(NEW_VER)"
+	@git add version/version.go
+	@git commit -m "chore: bump version to $(NEW_VER)"
+	@git tag -a "v$(NEW_VER)" -m "v$(NEW_VER)"
+	@echo "Tagged v$(NEW_VER). Run 'git push --tags' to trigger release."
+
+bump-major: ## Bump major version (X.y.z)
+	@$(eval NEW_VER := $(shell $(GOCMD) run ./scripts/bump/bump.go major))
+	@echo "Bumped to $(NEW_VER)"
+	@git add version/version.go
+	@git commit -m "chore: bump version to $(NEW_VER)"
+	@git tag -a "v$(NEW_VER)" -m "v$(NEW_VER)"
+	@echo "Tagged v$(NEW_VER). Run 'git push --tags' to trigger release."
+
+##@ Release
+
+release-dry-run: ## Test goreleaser without publishing
+	@goreleaser release --clean --skip=publish --snapshot
+
+##@ Cleanup
+
+clean: ## Remove build artifacts and coverage
+	@rm -rf $(BUILD_DIR)
+	@rm -f coverage.out coverage.html out.pdf
+	@echo "Cleaned."

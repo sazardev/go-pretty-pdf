@@ -14,6 +14,7 @@ import (
 	"github.com/sazardev/go-pretty-pdf/config"
 	"github.com/sazardev/go-pretty-pdf/mdx"
 	"github.com/sazardev/go-pretty-pdf/render"
+	"github.com/sazardev/go-pretty-pdf/version"
 )
 
 func runBuild(cmd *cobra.Command, args []string) error {
@@ -30,7 +31,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	output.PrintBanner(version)
+	output.PrintBanner(version.Version)
 
 	preflightResults := runPreFlight(cfg)
 	output.PrintPreFlight(preflightResults)

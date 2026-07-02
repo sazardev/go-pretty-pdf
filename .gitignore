@@ -17,6 +17,8 @@
 
 # Output directories
 examples/output/
+examples/full-demo/out.pdf
+examples/full-demo/demo.pdf
 
 # Coverage
 coverage.out
@@ -25,3 +27,20 @@ coverage.html
 # Go workspace
 go.work
 go.work.sum
+
+# GitHub Pages
+_site/
+
+# SBOM
+sbom.spdx.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
