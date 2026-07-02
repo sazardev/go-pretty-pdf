@@ -27,6 +27,8 @@ mdx/                     Parser (goldmark), component transpiler, DefaultValidat
 compose/                 HTML composition — template.html + print.css (go:embed), TOC builder
 render/                  Chrome headless PDF rendering via chromedp
 theme/                   Theme struct with Default and Minimal built-in themes
+version/                 Canonical version string (single source of truth, ldflags target)
+scripts/bump/            SemVer bump script — reads/writes version/version.go
 ```
 
 ---
@@ -186,7 +188,8 @@ Flags: same as `build` + `--config`.
 
 ### `pretty-pdf version`
 
-Prints `pretty-pdf <version>`. Version defaults to `"dev"`, override with `-ldflags "-X main.version=X.Y.Z"`.
+Prints `pretty-pdf <version>`. Version source: `github.com/sazardev/go-pretty-pdf/version.Version`.
+Defaults to `"dev"` in `version/version.go`, override at build via `-ldflags "-X github.com/sazardev/go-pretty-pdf/version.Version=X.Y.Z"`.
 
 ### Global Flags
 
@@ -447,6 +450,14 @@ go test ./config/... -v          # Config defaults (1), Load (1), partial defaul
 | `cmd/pretty-pdf/output/progress.go` | ~165 | `PipelineProgress` (Start/Done/Fail/Skip/PrintSummary), `WatchStats`, `PrintWatchBanner/Rebuild/Summary` |
 | `cmd/pretty-pdf/initassets/*` | 4 files | Scaffold templates for `init` command |
 | `pdf.go` | ~220 | Root API, 18 options, Build/Validate pipeline, step-by-step methods, WithComponent fix |
+| `version/version.go` | 3 | Canonical version string `var Version = "0.1.0"` |
+| `scripts/bump/bump.go` | ~65 | SemVer bump script (patch/minor/major), reads/writes version/version.go |
+| `doc.go` | ~18 | Package doc for pkg.go.dev |
+| `LICENSE` | 21 | MIT license |
+| `README.md` | ~240 | Full project documentation with badges, install, usage, API |
+| `CHANGELOG.md` | ~30 | Keep a Changelog format, v0.1.0 initial release |
+| `CONTRIBUTING.md` | ~45 | Contribution guide |
+| `SECURITY.md` | ~25 | Security policy |
 | `config/config.go` | 82 | Config struct, YAML Load(), FindConfig(), Default() |
 | `config/config_test.go` | 145 | 4 config tests |
 | `mdx/parser.go` | ~210 | Goldmark parser, variable substitution, RegisterComponent, `ParseFileError`, `ParseErrors` |
@@ -505,8 +516,23 @@ gopkg.in/yaml.v3                          YAML config file parsing
 12. **Pre-flight order**: Chrome check first (hard failure), then source/output/CSS/template (warnings can pass)
 13. **Partial parsing**: `ParseDir`/`ParseAll` never abort on per-file errors. Returns partial docs + `ParseErrors`. Caller decides whether to continue. Frontmatter-not-found logged as debug-level, not error
 14. **Watch mode debounce**: 300ms debounce via `time.AfterFunc`. Subsequent events within window reset the timer. Prevents double-builds on editor save (fsnotify fires multiple events per save)
+15. **Version canonical source**: `version/version.go` (not a `var` in `main.go`). All ldflags target `github.com/sazardev/go-pretty-pdf/version.Version`. Update via `make bump-patch|minor|major`.
+16. **Makefile is cross-platform**: Since v0.1.0, `make build` automatically appends `.exe` on Windows. Uses `$(GOOS)` detection.
+17. **Bump script reads version file**: `scripts/bump/bump.go` parses `version/version.go` via regex, bumps, writes back. Called by Makefile bump targets.
+18. **Docs workflow deploys to gh-pages**: `.github/workflows/docs.yml` builds both demo PDFs (library + CLI) and deploys to GitHub Pages with an index.html landing page.
 
 ---
+
+## Project Files (added for publication)
+
+| File | Purpose |
+|------|---------|
+| `LICENSE` | MIT license |
+| `README.md` | Full docs — badges, install, CLI usage, library API, config reference |
+| `CHANGELOG.md` | Keep a Changelog format, v0.1.0 initial |
+| `doc.go` | Package doc (package `prettypdf`) for pkg.go.dev |
+| `CONTRIBUTING.md` | Dev setup, conventions, commit style |
+| `SECURITY.md` | Vulnerability reporting policy |
 
 ## CI/CD Pipeline
 
@@ -514,21 +540,34 @@ gopkg.in/yaml.v3                          YAML config file parsing
 
 | Workflow | File | Trigger |
 |----------|------|---------|
-| **CI** | `.github/workflows/ci.yml` | Push/PR to `main` |
+| **CI** | `.github/workflows/ci.yml` | Push/PR to `main`/`master` |
 | **Release** | `.github/workflows/release.yml` | Tag `v*` pushed |
+| **Docs** | `.github/workflows/docs.yml` | Push to `main`/`master` (paths: examples, compose/assets, README) |
+| **Dependabot** | `.github/dependabot.yml` | Weekly — gomod + GitHub Actions |
 
 ### CI Jobs (parallel)
 
+- **tidy** — `go mod tidy` + `git diff --exit-code` (ensures go.mod/go.sum are clean)
 - **lint** — `golangci-lint` with 15 linters (5m timeout)
 - **test** — `go test -race -coverprofile` on ubuntu, macOS, windows (fail-fast: false)
 - **vet** — `go vet ./...`
-- **build** — `go build -ldflags="-s -w"`
+- **vulncheck** — `govulncheck` via `go run`
+- **build** — `go build -ldflags="-s -w"` on ubuntu, macOS, windows (fail-fast: false)
 
 ### Release Pipeline
 
 ```
-tag v* → test (matrix) → goreleaser (linux/darwin/windows amd64+arm64) → GitHub Release + changelog + checksums
+tag v* → test (matrix, with -race) → goreleaser (linux/darwin/windows amd64+arm64) → GitHub Release + changelog + checksums
 ```
+
+### Docs Pipeline (GitHub Pages)
+
+```
+push to main → build library demo PDF → build full-demo CLI PDF → create index.html → deploy to gh-pages
+```
+
+Hosted at: `https://sazardev.github.io/go-pretty-pdf/`
+Uploads: `library-demo.pdf`, `full-demo.pdf`, `index.html`
 
 ### Linters (`./golangci.yml`)
 
@@ -537,31 +576,51 @@ tag v* → test (matrix) → goreleaser (linux/darwin/windows amd64+arm64) → G
 ### Release Automation (`./goreleaser.yml`)
 
 - Builds: linux (amd64/arm64), darwin (amd64/arm64), windows (amd64)
-- ldflags: `-X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version={{ .Version }}`
+- ldflags: `-X github.com/sazardev/go-pretty-pdf/version.Version={{ .Version }}`
 - Archives: `tar.gz` (unix), `zip` (windows)
 - Changelog: auto, excludes docs/test/chore/merge
 - Checksums: `checksums.txt`
 
 ### Makefile (local dev)
 
-| Target | Command |
-|--------|---------|
+| Target | Description |
+|--------|-------------|
+| `make help` | Show all targets |
 | `make lint` | `golangci-lint run --timeout=5m` |
+| `make fmt` | `go fmt ./...` |
+| `make tidy` | `go mod tidy` |
+| `make vulncheck` | `govulncheck` |
 | `make test` | `go test -race ./...` |
 | `make test-verbose` | `go test -race -v ./...` |
-| `make test-cover` | test + HTML coverage report |
-| `make build` | build `bin/pretty-pdf` with git version |
-| `make build-release` | build + echo version |
+| `make test-cover` | test + HTML coverage report + func summary |
+| `make build` | build `bin/pretty-pdf` with version (cross-platform: auto `.exe` on Windows) |
+| `make build-release` | stripped build |
+| `make install` | `go install` with ldflags → `$GOPATH/bin` |
+| `make version-info` | Print current version |
+| `make bump-patch` | `scripts/bump/bump.go patch` → commit + tag |
+| `make bump-minor` | `scripts/bump/bump.go minor` → commit + tag |
+| `make bump-major` | `scripts/bump/bump.go major` → commit + tag |
 | `make release-dry-run` | goreleaser --snapshot --skip=publish |
 | `make clean` | rm bin/, coverage.out, coverage.html, out.pdf |
 
 ### Version Injection
 
-Version comes from `git describe --tags --always --dirty`. The `var version = "dev"` in `cmd/pretty-pdf/main.go:17` is overridden at build time via `-ldflags "-X github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf.version=<version>"`. This works in:
+Canonical source: `version/version.go` → `var Version = "0.1.0"`
+Overridden at build via: `-ldflags "-X github.com/sazardev/go-pretty-pdf/version.Version=<version>"`
+
+Works in:
 - GitHub Actions CI (`go build -ldflags="-s -w"`)
 - goreleaser (`ldflags` in `.goreleaser.yml`)
 - Makefile (`make build` reads git describe)
+- `go install` via `make install`
+
+The bump script (`scripts/bump/bump.go`) reads `version/version.go`, bumps patch/minor/major, writes back, and the Makefile target commits + tags.
 
 ### `.gitignore` Updates
 
-Added `bin/`, `coverage.out`, `coverage.html`
+Added `bin/`, `coverage.out`, `coverage.html`, `examples/full-demo/out.pdf`, `examples/full-demo/demo.pdf`,
+`_site/` (GitHub Pages), `sbom.spdx.json`, IDE dirs (`.idea/`, `.vscode/`), OS files (`.DS_Store`, `Thumbs.db`)
+
+### Removed Files (cleanup)
+
+`-p/` (empty dir), `pretty-pdf.exe` (binary in root), `.ignore` (empty), `skills-lock.json` (not standard)
