@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -31,6 +30,8 @@ var (
 	noColor    bool
 	quiet      bool
 	jsonOutput bool
+	initBare   bool
+	servePort  int
 )
 
 var rootCmd = &cobra.Command{
@@ -82,12 +83,21 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Preview MDX as HTML in the browser",
+	Long:  "Parse MDX files, compose HTML, and serve with live reload on file changes. No Chrome required.",
+	RunE:  runServe,
+}
+
 func init() {
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(watchCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(serveCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file")
 	rootCmd.PersistentFlags().StringVar(&sourceDir, "source", "book", "source MDX directory")
@@ -106,6 +116,14 @@ func init() {
 	buildCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
 
 	checkCmd.Flags().BoolVar(&strict, "strict", false, "treat content warnings as errors")
+
+	initCmd.Flags().BoolVar(&initBare, "bare", false, "non-interactive init with flags")
+	initCmd.Flags().StringVar(&title, "title", "My Book", "book title (for --bare)")
+	initCmd.Flags().StringVar(&author, "author", "go-pretty-pdf", "book author (for --bare)")
+	initCmd.Flags().StringVar(&themeName, "theme", "default", "book theme (for --bare)")
+	initCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
+
+	serveCmd.Flags().IntVar(&servePort, "port", 8080, "HTTP server port")
 }
 
 func main() {
@@ -114,79 +132,4 @@ func main() {
 	}
 }
 
-func scaffoldBook(targetDir string) error {
-	bookDir := filepath.Join(targetDir, "book")
-	if err := os.MkdirAll(bookDir, 0755); err != nil {
-		return fmt.Errorf("creating book directory: %w", err)
-	}
 
-	indexContent := `---
-id: "[1.0.0]"
-title: "Getting Started"
-subtitle: "A simple introduction"
-tags:
-  - example
-  - intro
-difficulty: "beginner"
-status: complete
-completeness: 100
-depends_on: []
----
-
-# Welcome to Your Book
-
-This is the first chapter of your book, created by **go-pretty-pdf**.
-
-## Overview
-
-Write your content using **MDX** — an extended Markdown format with support
-for custom components and variables.
-
-### What is go-pretty-pdf?
-
-go-pretty-pdf transforms your MDX files into a beautiful, print-ready PDF using headless Chrome.
-
-## Next Steps
-
-- Edit this file to start writing your book
-- Run ` + "`pretty-pdf build --source ./book --out my-book.pdf`" + ` to generate a PDF
-- Run ` + "`pretty-pdf check --source ./book`" + ` to validate your content
-`
-
-	indexPath := filepath.Join(bookDir, "index.mdx")
-	if err := os.WriteFile(indexPath, []byte(indexContent), 0644); err != nil {
-		return fmt.Errorf("writing index.mdx: %w", err)
-	}
-
-	configContent := `# go-pretty-pdf configuration
-source: "book"
-output: "out.pdf"
-title: "My Book"
-subtitle: ""
-author: ""
-
-theme: "default"
-
-lint:
-  requireFrontmatter:
-    - "id"
-    - "title"
-  noDuplicateIDs: true
-  maxHeadingDepth: 3
-
-vars:
-  BOOK_TITLE: "My Book"
-  AUTHOR_NAME: "Author"
-
-render:
-  paper: "a4"
-  timeout: "30s"
-`
-
-	configPath := filepath.Join(targetDir, ".pretty-pdf.yaml")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		return fmt.Errorf("writing config: %w", err)
-	}
-
-	return nil
-}
