@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/chromedp/cdproto/page"
@@ -52,7 +53,7 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 	ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
 
-	encoded := url.PathEscape(htmlContent)
+	encoded := url.QueryEscape(htmlContent)
 	dataURI := "data:text/html;charset=utf-8," + encoded
 
 	headerTpl := fmt.Sprintf(
@@ -88,7 +89,7 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 		return fmt.Errorf("chromedp render: %w", err)
 	}
 
-	if err := os.MkdirAll(dirname(outputPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
 
@@ -116,11 +117,4 @@ func CheckChromeAvailable() error {
 	return chromedp.Run(ctx)
 }
 
-func dirname(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == os.PathSeparator || path[i] == '/' {
-			return path[:i]
-		}
-	}
-	return "."
-}
+
