@@ -1,0 +1,92 @@
+---
+id: "[2.1.0]"
+title: Advanced Usage
+subtitle: Custom Components and Validators
+tags: [advanced, custom-components, validation, extensions]
+difficulty: Advanced
+status: Published
+completeness: 85
+depends_on: ["[2.0.0]"]
+---
+
+# Advanced Usage
+
+go-pretty-pdf is extensible via custom components and validators.
+
+## Custom Components
+
+Register custom MDX components using `WithComponent`:
+
+```go
+prettypdf.WithComponent("Callout", func(attrs map[string]string, inner string) string {
+    return fmt.Sprintf(
+        `<div class="callout callout-%s">%s</div>`,
+        attrs["title"], inner,
+    )
+})
+```
+
+Then use them in your MDX:
+
+<Callout title="info">
+This is a **custom Callout component** rendered via the transpiler pipeline.
+</Callout>
+
+<Callout title="tip">
+**Pro tip:** Custom components receive the same `rewriteInlineContent` treatment as built-in ones — backticks, bold, and newlines are converted automatically.
+</Callout>
+
+## Custom Validators
+
+Implement the `Validator` interface to validate frontmatter:
+
+```go
+type Validator interface {
+    Validate(doc *Document) []ValidationError
+}
+```
+
+<DeepDive title="Validator Use Cases">
+Validators are useful for:
+
+- Ensuring required fields are present
+- Checking ID format and uniqueness
+- Verifying `depends_on` references are valid
+- Enforcing naming conventions
+- Custom business rules per project
+
+The validator runs during both `Build()` and `Validate()`.
+</DeepDive>
+
+## Frontmatter Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | **Yes** | Document ID `[X.Y.Z]` |
+| `title` | `string` | No | Display title |
+| `subtitle` | `string` | No | Subtitle |
+| `tags` | `[]string` | No | Keywords |
+| `difficulty` | `string` | No | Beginner/Intermediate/Advanced |
+| `status` | `string` | No | Draft/Published |
+| `completeness` | `int` | No | 0-100 percentage |
+| `depends_on` | `[]string` | No | Prerequisite IDs |
+
+<Warning>
+The `id` field is **mandatory** at parse time. Files without an `id` will cause parse errors or be sorted as `[0.0.0]`.
+</Warning>
+
+## Raw HTML in MDX
+
+Since goldmark is configured with `WithUnsafe()`, you can embed raw HTML directly:
+
+<p style="color: #4a6cf7; font-weight: bold;">
+This paragraph uses inline styles via raw HTML.
+</p>
+
+<blockquote style="border-left: 4px solid #e74c3c; padding: 8px 16px;">
+  <strong>Note:</strong> Raw HTML is passed through without sanitization.
+</blockquote>
+
+<Axiom>
+Flexibility at every layer — from components to validators to templates — means go-pretty-pdf adapts to your documentation workflow, not the other way around.
+</Axiom>

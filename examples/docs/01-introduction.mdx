@@ -1,0 +1,43 @@
+---
+id: "[1.0.0]"
+title: Introduction
+subtitle: Getting Started with go-pretty-pdf
+tags: [introduction, overview, getting-started]
+difficulty: Beginner
+status: Published
+completeness: 100
+---
+
+# Introduction
+
+Welcome to **go-pretty-pdf** — a Go library that transforms MDX documentation into print-ready PDFs via headless Chrome.
+
+This example document showcases every feature available in the system.
+
+## What is MDX?
+
+MDX combines **Markdown** with custom *components*. You can use standard markdown:
+
+- **Bold** and _italic_ text
+- `inline code` and code blocks
+- Tables, lists, and blockquotes
+
+And extend it with components like `<DeepDive>`, `<Warning>`, and `<Axiom>`.
+
+## Document Structure
+
+Documents are sorted by their `id` field, not by filename. The ID format is `[X.Y.Z]` where:
+
+- **X** — Major section (TOC H1)
+- **Y** — Subsection (TOC H2)
+- **Z** — Minor topic (TOC H3)
+
+This gives you precise control over ordering and table of contents hierarchy.
+
+<DeepDive title="Sorting Rules">
+The TOC rendering follows these rules:
+
+- `[X.0.0]` renders as H1 — only the first occurrence per major number
+- `[X.Y.0]` with Y != 0 renders as H2
+- `[X.Y.Z]` with Z != 0 renders as H3
+</DeepDive>

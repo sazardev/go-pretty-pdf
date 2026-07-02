@@ -1,0 +1,78 @@
+---
+id: "[2.0.0]"
+title: API Reference
+subtitle: Public API and Configuration
+tags: [api, reference, configuration]
+difficulty: Advanced
+status: Published
+completeness: 95
+depends_on: ["[1.1.1]"]
+---
+
+# API Reference
+
+The public API is designed around the **functional options** pattern, providing a clean, extensible interface.
+
+## Creating a PDF instance
+
+```go
+pdf, err := prettypdf.New(
+    prettypdf.WithSourceDir("./docs"),
+    prettypdf.WithOutputFile("out.pdf"),
+    prettypdf.WithTitle("Documentation"),
+    prettypdf.WithSubtitle("A Complete Reference"),
+    prettypdf.WithAuthor("Your Name"),
+)
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `WithSourceDir` | `string` | `"."` | MDX source directory |
+| `WithOutputFile` | `string` | `"out.pdf"` | Output PDF path |
+| `WithTitle` | `string` | `"Document"` | Document title |
+| `WithSubtitle` | `string` | `""` | Document subtitle |
+| `WithAuthor` | `string` | `"go-pretty-pdf"` | Author name |
+| `WithTimeout` | `time.Duration` | `60s` | Chrome render timeout |
+| `WithCSS` | `string` | embedded | Custom CSS override |
+| `WithTemplate` | `string` | embedded | Custom HTML template |
+| `WithTheme` | `theme.Theme` | — | Apply a theme preset |
+| `WithComponent` | `(name, handler)` | — | Register custom component |
+| `WithValidator` | `mdx.Validator` | — | Register frontmatter validator |
+
+## Themes
+
+Two built-in themes are available:
+
+| Theme | Description |
+|-------|-------------|
+| `theme.Default` | Full-featured with cover page, larger typography |
+| `theme.Minimal` | Compact, smaller margins and fonts |
+
+Apply via:
+
+```go
+prettypdf.WithTheme(theme.Minimal)
+```
+
+or override specific fields:
+
+```go
+prettypdf.WithCSS(myCustomCSS)
+prettypdf.WithTemplate(myCustomTemplate)
+```
+
+<DeepDive title="Theme Resolution Order">
+When both a theme and individual CSS/Template options are set, the **last-applied option wins**. Themes set at the `prettypdf` level populate `composeOpts.CSS` and `composeOpts.Template`. Any subsequent `WithCSS` or `WithTemplate` call overrides those values.
+</DeepDive>
+
+## Build Pipeline
+
+```
+MDX Files → Parse (goldmark) → Transpile Components → Compose HTML → Render PDF
+```
+
+<Axiom title="Separation of Concerns">
+Each stage of the pipeline is independently replaceable. The parser, composer, and renderer are in separate packages with clean interfaces.
+</Axiom>

@@ -1,0 +1,48 @@
+---
+id: "[1.1.0]"
+title: Built-in Components
+subtitle: DeepDive, Warning, and Axiom
+tags: [components, deepdive, warning, axiom]
+difficulty: Beginner
+status: Published
+completeness: 100
+depends_on: ["[1.0.0]"]
+---
+
+# Built-in Components
+
+go-pretty-pdf ships with three built-in components that make documentation more expressive.
+
+## DeepDive
+
+Use `<DeepDive>` for supplementary deep-dive content that readers can skip on first pass.
+
+<DeepDive title="Advanced: How Goldmark Parses MDX">
+The parser uses **goldmark** with the `goldmark-meta` extension for YAML frontmatter and GFM for tables, task lists, and strikethrough. Raw HTML is allowed via `WithUnsafe()`.
+
+The component transpiler runs **after** goldmark converts the MDX to HTML, using regex to find and replace component tags.
+</DeepDive>
+
+<DeepDive>
+DeepDive also works **without** a title attribute. The title div is simply omitted from the output.
+</DeepDive>
+
+## Warning
+
+Use `<Warning>` to highlight important caveats, gotchas, or things to watch out for.
+
+<Warning title="Heads Up">
+Always ensure **Chrome or Chromium** is installed on your system. The render step uses chromedp to drive a headless browser, and will fail without one.
+</Warning>
+
+## Axiom
+
+Use `<Axiom>` for fundamental truths, principles, or design philosophies.
+
+<Axiom title="Principle of Least Surprise">
+A system should behave in ways that users expect it to behave — consistency and predictability reduce cognitive load.
+</Axiom>
+
+<Axiom>
+Axioms also work without a title. The blockquote styling is preserved regardless.
+</Axiom>

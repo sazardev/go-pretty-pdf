@@ -1,0 +1,92 @@
+---
+id: "[1.1.1]"
+title: Markdown Formatting
+subtitle: Tables, Code, Lists, and More
+tags: [markdown, tables, code, formatting]
+difficulty: Beginner
+status: Published
+completeness: 90
+depends_on: ["[1.1.0]"]
+---
+
+# Markdown Formatting
+
+Every standard Markdown feature works inside MDX files.
+
+## Tables
+
+| Feature       | Status   | Priority | Notes                  |
+|---------------|----------|----------|------------------------|
+| Bold/Italic   | ✅ Done  | P0       | Standard markdown      |
+| Code blocks   | ✅ Done  | P0       | Syntax highlighting    |
+| Tables        | ✅ Done  | P1       | GFM tables             |
+| Images        | ✅ Done  | P2       | Via `<img>` tag        |
+| Custom comps  | ✅ Done  | P0       | DeepDive, Warning, Axiom |
+
+## Code Blocks
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "github.com/sazardev/go-pretty-pdf"
+)
+
+func main() {
+    pdf, err := prettypdf.New(
+        prettypdf.WithSourceDir("./docs"),
+        prettypdf.WithOutputFile("output.pdf"),
+        prettypdf.WithTitle("My Document"),
+    )
+    if err != nil {
+        panic(err)
+    }
+    err = pdf.Build(context.Background())
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+    }
+}
+```
+
+## Blockquotes
+
+> This is a standard blockquote.
+> It can span multiple lines.
+>
+> — Anonymous
+
+## Lists
+
+Ordered list:
+
+1. Parse MDX files from a directory
+2. Transpile custom components to HTML
+3. Compose the full HTML with TOC and assets
+4. Render to PDF via headless Chrome
+
+Unordered list:
+
+- Frontmatter drives metadata and ordering
+- Components add semantic structure
+- Templates control the final look
+- Themes bundle CSS and templates together
+
+## Horizontal Rule
+
+---
+
+## Strikethrough and Task Lists
+
+GFM extensions enable ~~strikethrough~~ and task lists:
+
+- [x] Frontmatter parsing
+- [x] Component transpilation
+- [x] TOC generation
+- [ ] Cover page customization
+- [ ] Multi-theme support
+
+<Warning>
+Task lists render as checkboxes in HTML, but **in the PDF** they appear as static checked/unchecked boxes.
+</Warning>

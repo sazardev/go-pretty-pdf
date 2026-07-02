@@ -1,0 +1,65 @@
+---
+id: "[3.0.0]"
+title: Custom Component Showcase
+subtitle: Callout, Steps, and Card Components
+tags: [showcase, custom-components, callout, steps, card]
+difficulty: Advanced
+status: Published
+completeness: 100
+depends_on: ["[2.1.0]"]
+---
+
+# Custom Component Showcase
+
+This file demonstrates custom components registered via `WithComponent`. These components are not available via the CLI — you need a small Go program to use them.
+
+## Callout Component
+
+<Callout title="info">
+Use Callout for informational messages, tips, and highlights.
+</Callout>
+
+<Callout title="success">
+**Operation completed successfully!** Custom components support **bold**, `inline code`, and _italic_.
+</Callout>
+
+<Callout title="warning">
+Callouts with different `title` values can be styled differently via CSS.
+</Callout>
+
+<Callout title="error">
+This feature requires **Chrome/Chromium** to be installed. Without it, the render step will fail.
+</Callout>
+
+## Steps Component
+
+The Steps component renders numbered sequences with visual connectors:
+
+<Steps>
+Install go-pretty-pdf with `go get`
+Create a `docs/` directory with `.mdx` files
+Write a Go program using the public API
+Run it to generate your PDF
+</Steps>
+
+## Card Component
+
+<Card title="Parser" icon="📄">
+Parses MDX files using goldmark with GFM and metadata extensions. Supports frontmatter-driven metadata.
+</Card>
+
+<Card title="Composer" icon="🎨">
+Combines parsed documents with templates, CSS, and a table of contents into a single HTML page.
+</Card>
+
+<Card title="Renderer" icon="🖨️">
+Drives headless Chrome via chromedp to convert the composed HTML into a tagged, accessible PDF.
+</Card>
+
+<DeepDive title="How Custom Components Work">
+Each custom component is registered with a name and a handler function. The transpiler builds a regex pattern `(?s)<ComponentName(?:\s+title="([^"]*)")?\s*>(.*?)</ComponentName>` and runs it against the goldmark-generated HTML.
+
+The `attrs` map receives any recognized attributes (currently `title`), and `innerHTML` receives the raw text content between the tags.
+
+After the handler returns the replacement HTML, it is **not** re-processed — so your handler must produce valid HTML directly.
+</DeepDive>
