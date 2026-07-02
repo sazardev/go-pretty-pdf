@@ -1,0 +1,34 @@
+title: "go-pretty-pdf Full Demo"
+subtitle: "A comprehensive example demonstrating every feature"
+author: "Omar"
+source: .
+output: out.pdf
+theme: default
+css: custom.css
+template: custom-template.html
+
+vars:
+  product: "go-pretty-pdf"
+  version: "1.0.0"
+  company: "SazarDev"
+  website: "https://github.com/sazardev/go-pretty-pdf"
+  year: "2026"
+
+lint:
+  require_frontmatter:
+    - id
+    - title
+    - difficulty
+    - status
+  require_id_format: "[X.Y.Z]"
+  no_duplicate_ids: true
+  max_heading_depth: 3
+
+render:
+  timeout: 60s
+  paper: a4
+  margin_top: 20mm
+  margin_bottom: 20mm
+  margin_left: 15mm
+  margin_right: 15mm
+  header_title: "{{product}} v{{version}}"

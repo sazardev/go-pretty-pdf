@@ -1,0 +1,57 @@
+---
+id: "[1.1.1]"
+title: Installation
+subtitle: ""
+tags: [installation]
+difficulty: Beginner
+status: Draft
+completeness: 0
+depends_on: ["[1.1.0]"]
+---
+
+# Installation
+
+Detailed installation steps for getting go-pretty-pdf running on your system.
+
+## Prerequisites
+
+- **Go 1.26+** installed on your system
+- **Chrome or Chromium** installed for PDF rendering
+
+## Install the CLI
+
+```bash
+go install github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf@latest
+```
+
+## Verify
+
+```bash
+pretty-pdf version
+```
+
+## Using as a Library
+
+```go
+import prettypdf "github.com/sazardev/go-pretty-pdf"
+
+pdf, _ := prettypdf.New(
+    prettypdf.WithSourceDir("book"),
+    prettypdf.WithTitle("My Book"),
+)
+pdf.Build(ctx)
+```
+
+<Axiom>
+Simplicity is the prerequisite for reliability.
+</Axiom>
+
+## Variable Substitution
+
+Define variables in `go-pretty-pdf.yml` under `vars:` and reference them
+in your MDX with `{{variable_name}}`. Use variables for API versions,
+company names, URLs, or any text that changes across documents.
+
+| Variable | Value |
+|----------|-------|
+| `{{api_version}}` | {{api_version}} |

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{.Title}} — Custom Template</title>
+<meta name="author" content="{{.Author}}">
+<meta name="generator" content="go-pretty-pdf">
+<style>{{.CSS}}</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>{{.Title}}</h1>
+  <p class="cover-subtitle">{{.Subtitle}}</p>
+  <div class="metadata">
+    <span>By {{.Author}}</span>
+    <span>Generated: {{.BuiltAt}}</span>
+    <span>{{.TotalDocs}} sections</span>
+  </div>
+</div>
+
+<div style="page-break-before:always; break-before:page;"></div>
+
+<h1 style="page-break-before:avoid; border:none; font-size:22pt; margin-bottom:16pt;">Contents</h1>
+{{.Body}}
+
+<hr>
+<p style="text-align:center; color:#666; font-size:8pt;">Generated with go-pretty-pdf</p>
+</body>
+</html>

@@ -19,6 +19,7 @@ import (
 type Parser struct {
 	md         goldmark.Markdown
 	components *ComponentRegistry
+	vars       map[string]string
 }
 
 type ParserOption func(*Parser)
@@ -26,6 +27,12 @@ type ParserOption func(*Parser)
 func WithComponent(name string, handler ComponentHandler) ParserOption {
 	return func(p *Parser) {
 		p.components.Register(name, handler)
+	}
+}
+
+func WithVars(vars map[string]string) ParserOption {
+	return func(p *Parser) {
+		p.vars = vars
 	}
 }
 
@@ -49,6 +56,14 @@ func NewParser(opts ...ParserOption) *Parser {
 		o(p)
 	}
 	return p
+}
+
+func (p *Parser) RegisterComponent(name string, handler ComponentHandler) {
+	p.components.Register(name, handler)
+}
+
+func (p *Parser) SetVars(vars map[string]string) {
+	p.vars = vars
 }
 
 func (p *Parser) ParseDir(dir string) ([]*Document, error) {
@@ -94,6 +109,8 @@ func (p *Parser) ParseFile(path string) (*Document, error) {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
 
+	raw = p.substituteVars(raw)
+
 	ctx := parser.NewContext()
 	var buf bytes.Buffer
 
@@ -127,6 +144,17 @@ func (p *Parser) ParseAll(paths []string) ([]*Document, error) {
 	}
 	sortDocuments(docs)
 	return docs, nil
+}
+
+func (p *Parser) substituteVars(raw []byte) []byte {
+	if len(p.vars) == 0 {
+		return raw
+	}
+	result := string(raw)
+	for k, v := range p.vars {
+		result = strings.ReplaceAll(result, "{{"+k+"}}", v)
+	}
+	return []byte(result)
 }
 
 func sortDocuments(docs []*Document) {

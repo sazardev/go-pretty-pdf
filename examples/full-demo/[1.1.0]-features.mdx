@@ -1,0 +1,53 @@
+---
+id: "[1.1.0]"
+title: Features Overview
+subtitle: Everything {{product}} offers
+tags: [features]
+difficulty: Beginner
+status: Published
+completeness: 90
+depends_on: ["[1.0.0]"]
+---
+
+# Features Overview
+
+{{product}} comes with a rich set of features designed for maximum developer experience.
+
+## Built-in Components
+
+Three components are available out of the box:
+
+| Component | Purpose | Visual |
+|-----------|---------|--------|
+| `<DeepDive>` | Detailed explanation | Blue left border |
+| `<Warning>` | Important caution | Orange left border |
+| `<Axiom>` | Core principle | Green, italic |
+
+## Variable Substitution
+
+Define variables in `go-pretty-pdf.yml` under `vars:`:
+
+```yaml
+vars:
+  product: "{{product}}"
+  version: "{{version}}"
+  company: "{{company}}"
+```
+
+Use them anywhere in your MDX: `{{"{{product}}"}}`, `{{"{{version}}"}}`.
+
+## Heading Depth
+
+You can use h1 through h3 by default (configurable via `lint.max_heading_depth`).
+
+### Deep section (h3)
+
+This is an h3 heading. The linter will warn if you use deeper headings.
+
+<DeepDive title="Linter in action">
+Run `pretty-pdf check --strict` to catch:
+- Missing frontmatter fields
+- Invalid ID formats
+- Duplicate IDs across files
+- Heading depth exceeding the configured limit
+</DeepDive>

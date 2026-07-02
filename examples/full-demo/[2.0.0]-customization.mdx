@@ -1,0 +1,62 @@
+---
+id: "[2.0.0]"
+title: Customization Guide
+subtitle: Make it yours
+tags: [customization, theme, css]
+difficulty: Advanced
+status: Published
+completeness: 80
+depends_on: ["[1.1.0]"]
+---
+
+# Customization Guide
+
+{{product}} is designed to be fully customizable. Here's how.
+
+## Custom CSS
+
+Override the default print styles by providing your own CSS:
+
+```bash
+pretty-pdf build --css ./custom.css
+```
+
+Or define it in `go-pretty-pdf.yml`:
+
+```yaml
+css: custom.css
+```
+
+## Custom Template
+
+Override the HTML template for complete control over the document structure:
+
+```bash
+pretty-pdf build --template ./custom-template.html
+```
+
+Template variables available:
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `{{"{{.Title}}"}}` | string | Document title |
+| `{{"{{.Subtitle}}"}}` | string | Document subtitle |
+| `{{"{{.Author}}"}}` | string | Author name |
+| `{{"{{.CSS}}"}}` | CSS | Raw CSS content |
+| `{{"{{.Body}}"}}` | HTML | Composed body (TOC + sections) |
+| `{{"{{.BuiltAt}}"}}` | string | Generation timestamp |
+| `{{"{{.TotalDocs}}"}}` | int | Number of sections |
+
+## Themes
+
+Choose a built-in theme:
+
+```bash
+pretty-pdf build --theme default
+pretty-pdf build --theme minimal
+```
+
+<Axiom>
+Customization should be optional, not required.
+Good defaults make great DX.
+</Axiom>

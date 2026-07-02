@@ -1,0 +1,54 @@
+---
+id: "[1.1.1]"
+title: CLI Flags Reference
+subtitle: Full control from the command line
+tags: [cli, flags, reference]
+difficulty: Intermediate
+status: Published
+completeness: 100
+depends_on: ["[1.1.0]"]
+---
+
+# CLI Flags Reference
+
+The `pretty-pdf build` command accepts these flags:
+
+## Config & Source
+
+```bash
+pretty-pdf build \
+  --config custom.yml \
+  --source ./docs \
+  --out mybook.pdf
+```
+
+## Metadata
+
+```bash
+pretty-pdf build \
+  --title "{{product}} Guide" \
+  --subtitle "A complete reference" \
+  --author "{{company}}"
+```
+
+## Theme & Style
+
+```bash
+pretty-pdf build \
+  --theme minimal \
+  --css ./custom.css \
+  --template ./custom-template.html
+```
+
+## Render Options
+
+```bash
+pretty-pdf build \
+  --timeout 30s \
+  --verbose
+```
+
+<Warning title="Precedence">
+CLI flags **always override** config file values.
+Config file values override defaults.
+</Warning>

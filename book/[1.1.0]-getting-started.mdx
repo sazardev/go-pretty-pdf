@@ -1,0 +1,35 @@
+---
+id: "[1.1.0]"
+title: Getting Started
+subtitle: ""
+tags: [getting-started, setup]
+difficulty: Beginner
+status: Draft
+completeness: 0
+depends_on: ["[1.0.0]"]
+---
+
+# Getting Started
+
+This chapter covers the basics of setting up and using go-pretty-pdf.
+
+## Installation
+
+Make sure you have Go installed and Chrome/Chromium available on your system.
+
+## Directory Structure
+
+Your book is organized as a flat directory of `.mdx` files:
+
+```
+book/
+├── go-pretty-pdf.yml          # Book configuration
+├── [1.0.0]-introduction.mdx   # Chapter 1
+├── [1.1.0]-getting-started.mdx # Chapter 1, Section 1
+└── [1.1.1]-installation.mdx   # Chapter 1, Section 1, Subsection 1
+```
+
+<Warning title="Important">
+The ID in `[X.Y.Z]` format determines the document order and table of contents hierarchy,
+**not** the filename. Keep your IDs consistent.
+</Warning>

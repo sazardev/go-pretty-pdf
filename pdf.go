@@ -3,9 +3,11 @@ package prettypdf
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/sazardev/go-pretty-pdf/compose"
+	"github.com/sazardev/go-pretty-pdf/config"
 	"github.com/sazardev/go-pretty-pdf/mdx"
 	"github.com/sazardev/go-pretty-pdf/render"
 	"github.com/sazardev/go-pretty-pdf/theme"
@@ -18,6 +20,7 @@ type PDF struct {
 	composeOpts compose.Options
 	renderOpts  render.Options
 	validator   mdx.Validator
+	verbose     bool
 }
 
 type ComposeOptions = compose.Options
@@ -87,7 +90,7 @@ func WithTheme(t theme.Theme) Option {
 
 func WithComponent(name string, handler mdx.ComponentHandler) Option {
 	return func(p *PDF) {
-		p.parser = mdx.NewParser(mdx.WithComponent(name, handler))
+		p.parser.RegisterComponent(name, handler)
 	}
 }
 
@@ -109,9 +112,85 @@ func WithHeaderTitle(title string) Option {
 	}
 }
 
+func WithVerbose(v bool) Option {
+	return func(p *PDF) {
+		p.verbose = v
+	}
+}
+
+func WithVars(vars map[string]string) Option {
+	return func(p *PDF) {
+		p.parser.SetVars(vars)
+	}
+}
+
+func WithRenderMargins(top, bottom, left, right float64) Option {
+	return func(p *PDF) {
+		p.renderOpts.MarginTop = top
+		p.renderOpts.MarginBottom = bottom
+		p.renderOpts.MarginLeft = left
+		p.renderOpts.MarginRight = right
+	}
+}
+
+func WithPaperSize(width, height float64) Option {
+	return func(p *PDF) {
+		p.renderOpts.PaperWidth = width
+		p.renderOpts.PaperHeight = height
+	}
+}
+
+func WithConfig(cfg *config.Config) Option {
+	return func(p *PDF) {
+		if cfg.Source != "" {
+			p.sourceDir = cfg.Source
+		}
+		if cfg.Output != "" {
+			p.outputFile = cfg.Output
+		}
+		if cfg.Title != "" {
+			p.composeOpts.Title = cfg.Title
+		}
+		if cfg.Subtitle != "" {
+			p.composeOpts.Subtitle = cfg.Subtitle
+		}
+		if cfg.Author != "" {
+			p.composeOpts.Author = cfg.Author
+		}
+	}
+}
+
+func WithConfigCSSAndTemplate(cfg *config.Config) Option {
+	return func(p *PDF) {
+		if cfg.CSS != "" {
+			data, err := os.ReadFile(cfg.CSS)
+			if err == nil {
+				p.composeOpts.CSS = string(data)
+			} else if p.verbose {
+				fmt.Fprintf(os.Stderr, "Warning: reading CSS file %s: %v\n", cfg.CSS, err)
+			}
+		}
+		if cfg.Template != "" {
+			data, err := os.ReadFile(cfg.Template)
+			if err == nil {
+				p.composeOpts.Template = string(data)
+			} else if p.verbose {
+				fmt.Fprintf(os.Stderr, "Warning: reading template file %s: %v\n", cfg.Template, err)
+			}
+		}
+		if cfg.Theme != "" {
+			switch cfg.Theme {
+			case "minimal":
+				p.composeOpts.CSS = theme.Minimal.CSS
+			case "default":
+			}
+		}
+	}
+}
+
 func New(opts ...Option) (*PDF, error) {
 	p := &PDF{
-		sourceDir:   ".",
+		sourceDir:   "book",
 		outputFile:  "out.pdf",
 		parser:      mdx.NewParser(),
 		composeOpts: compose.DefaultOptions(),
@@ -128,12 +207,21 @@ func New(opts ...Option) (*PDF, error) {
 }
 
 func (p *PDF) Build(ctx context.Context) error {
+	if p.verbose {
+		fmt.Printf("Parsing MDX files in %s...\n", p.sourceDir)
+	}
+
 	docs, err := p.parser.ParseDir(p.sourceDir)
 	if err != nil {
 		return fmt.Errorf("parsing: %w", err)
 	}
 
+	if p.verbose {
+		fmt.Printf("Found %d document(s)\n", len(docs))
+	}
+
 	if p.validator != nil {
+		p.logVerbose("Running validation...")
 		var allErrs []mdx.ValidationError
 		for _, doc := range docs {
 			errs := p.validator.Validate(doc)
@@ -145,13 +233,16 @@ func (p *PDF) Build(ctx context.Context) error {
 			}
 			return fmt.Errorf("validation failed: %d error(s)", len(allErrs))
 		}
+		p.logVerbose("Validation passed")
 	}
 
+	p.logVerbose("Composing HTML...")
 	html, err := compose.ComposeHTML(docs, p.composeOpts)
 	if err != nil {
 		return fmt.Errorf("composing HTML: %w", err)
 	}
 
+	p.logVerbose(fmt.Sprintf("Rendering PDF to %s...", p.outputFile))
 	if err := render.RenderToPDF(html, p.outputFile, p.renderOpts); err != nil {
 		return fmt.Errorf("rendering PDF: %w", err)
 	}
@@ -176,4 +267,10 @@ func (p *PDF) Validate(ctx context.Context) ([]mdx.ValidationError, error) {
 	}
 
 	return allErrs, nil
+}
+
+func (p *PDF) logVerbose(msg string) {
+	if p.verbose {
+		fmt.Println(msg)
+	}
 }
