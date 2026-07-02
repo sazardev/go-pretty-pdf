@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{.Title}}</title>
+<meta name="author" content="{{.Author}}">
+<meta name="description" content="{{.Subtitle}}">
+<meta name="keywords" content="{{.Keywords}}">
+<meta name="generator" content="go-pretty-pdf">
+<style>{{.CSS}}</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>{{.Title}}</h1>
+  <p class="cover-subtitle">{{.Subtitle}}</p>
+  <div class="metadata">
+    <span>Built: {{.BuiltAt}}</span>
+    <span>Sections: {{.TotalDocs}}</span>
+    <span>Tags: {{.Keywords}}</span>
+  </div>
+</div>
+
+<div style="page-break-before:always; break-before:page;"></div>
+
+{{.Body}}
+
+</body>
+</html>

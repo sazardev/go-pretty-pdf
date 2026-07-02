@@ -1,0 +1,277 @@
+@page {
+  size: A4;
+  margin: 20mm 15mm 20mm 15mm;
+
+  @bottom-right {
+    content: counter(page);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 9pt;
+    color: #666;
+  }
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.6;
+  color: #1a1a1a;
+  orphans: 3;
+  widows: 3;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Inter', 'General Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #000;
+}
+
+h1 {
+  font-size: 18pt;
+  margin-top: 0;
+  page-break-before: always;
+  break-before: page;
+}
+
+section h1:first-child {
+  page-break-before: auto;
+  break-before: auto;
+}
+
+h1:first-of-type {
+  page-break-before: avoid;
+  break-before: avoid;
+}
+
+h2 {
+  font-size: 14pt;
+  margin-top: 1.2em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 12pt;
+  margin-top: 1em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+h4 {
+  font-size: 11pt;
+  margin-top: 0.8em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 9pt;
+}
+
+pre {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  line-height: 1.4;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+code {
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.component-deep-dive {
+  background: #f0f4ff;
+  border-left: 4px solid #4a6cf7;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 10pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.component-deep-dive-title {
+  margin: 0 0 8px 0;
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: #4a6cf7;
+}
+
+.component-warning {
+  background: #fff8e6;
+  border-left: 4px solid #f7a84a;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 10pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.component-axiom {
+  background: #f0faf0;
+  border-left: 4px solid #4caf50;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 4px 4px 0;
+  font-size: 10pt;
+  font-style: italic;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 9.5pt;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f0f0f0;
+  font-weight: 600;
+}
+
+tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: #4a6cf7;
+  text-decoration: none;
+}
+
+blockquote {
+  margin: 12px 0;
+  padding: 8px 16px;
+  border-left: 3px solid #999;
+  color: #555;
+}
+
+ul, ol {
+  padding-left: 20px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 20px 0;
+}
+
+.cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: left;
+}
+
+.cover h1 {
+  font-size: 28pt;
+  font-weight: 700;
+  margin: 0 0 12pt 0;
+  page-break-before: avoid;
+  break-before: avoid;
+  color: #1a1a1a;
+}
+
+.cover-subtitle {
+  font-size: 12pt;
+  color: #555;
+  margin: 0 0 24pt 0;
+  max-width: 75%;
+  line-height: 1.5;
+}
+
+.metadata {
+  font-size: 9pt;
+  color: #888;
+  margin-top: 8pt;
+}
+
+.metadata span {
+  display: block;
+  margin-bottom: 2pt;
+}
+
+.toc h1 {
+  font-size: 22pt;
+  margin-bottom: 16pt;
+  page-break-before: avoid;
+  break-before: avoid;
+}
+
+.toc-h1 {
+  font-size: 11pt;
+  font-weight: 600;
+  margin-top: 10pt;
+}
+
+.toc-h2 {
+  font-size: 10pt;
+  margin-top: 4pt;
+  padding-left: 18pt;
+}
+
+.toc-h3 {
+  font-size: 9.5pt;
+  margin-top: 2pt;
+  padding-left: 36pt;
+  color: #555;
+}
+
+.toc a {
+  color: #1a1a1a;
+  text-decoration: none;
+  display: block;
+  padding: 1pt 0;
+}
+
+.toc a:hover {
+  color: #4a6cf7;
+}
+
+section {
+  margin-bottom: 0;
+}
+
+section h1:first-child {
+  page-break-before: always;
+  break-before: page;
+}
+
+section:first-of-type h1:first-child {
+  page-break-before: avoid;
+  break-before: avoid;
+}
