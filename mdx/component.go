@@ -2,6 +2,7 @@ package mdx
 
 import (
 	"fmt"
+	"html"
 	"regexp"
 	"strings"
 )
@@ -53,7 +54,7 @@ func deepDiveHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<aside class="component-deep-dive">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-deep-dive-title">%s</div>`, escapeHTML(attrs["title"])))
+		buf.WriteString(fmt.Sprintf(`<div class="component-deep-dive-title">%s</div>`, html.EscapeString(attrs["title"])))
 		buf.WriteString("\n")
 	}
 	buf.WriteString(rewriteInlineContent(inner))
@@ -65,7 +66,7 @@ func warningHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<div class="component-warning">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-deep-dive-title">%s</div>`, escapeHTML(attrs["title"])))
+		buf.WriteString(fmt.Sprintf(`<div class="component-warning-title">%s</div>`, html.EscapeString(attrs["title"])))
 		buf.WriteString("\n")
 	}
 	buf.WriteString(rewriteInlineContent(inner))
@@ -77,7 +78,7 @@ func axiomHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<blockquote class="component-axiom">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-deep-dive-title">%s</div>`, escapeHTML(attrs["title"])))
+		buf.WriteString(fmt.Sprintf(`<div class="component-axiom-title">%s</div>`, html.EscapeString(attrs["title"])))
 		buf.WriteString("\n")
 	}
 	buf.WriteString(rewriteInlineContent(inner))
@@ -95,10 +96,4 @@ func rewriteInlineContent(content string) string {
 	return result
 }
 
-func escapeHTML(s string) string {
-	s = strings.ReplaceAll(s, "&", "&amp;")
-	s = strings.ReplaceAll(s, "<", "&lt;")
-	s = strings.ReplaceAll(s, ">", "&gt;")
-	s = strings.ReplaceAll(s, "\"", "&quot;")
-	return s
-}
+
