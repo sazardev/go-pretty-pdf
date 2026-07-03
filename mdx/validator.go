@@ -24,6 +24,9 @@ type Validator interface {
 	ValidateAll(docs []*Document) []ValidationError
 }
 
+const defaultTitleField = "title"
+const defaultIDValue = "[1.0.0]"
+
 type DefaultValidator struct {
 	RequireFrontmatter []string
 	NoDuplicateIDs     bool
@@ -32,7 +35,7 @@ type DefaultValidator struct {
 
 func NewDefaultValidator() *DefaultValidator {
 	return &DefaultValidator{
-		RequireFrontmatter: []string{"id", "title"},
+		RequireFrontmatter: []string{"id", defaultTitleField},
 		NoDuplicateIDs:     true,
 		MaxHeadingDepth:    3,
 	}

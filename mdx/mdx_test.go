@@ -175,7 +175,7 @@ This is **bold** and ` + "`code`" + `.
 		t.Fatal(err)
 	}
 
-	if doc.ID() != "[1.0.0]" {
+	if doc.ID() != defaultIDValue {
 		t.Errorf("expected ID [1.0.0], got %s", doc.ID())
 	}
 	if doc.Title() != "Test Chapter" {

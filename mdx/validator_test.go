@@ -6,17 +6,27 @@ import (
 	"testing"
 )
 
+const (
+	testContentHTML = "<p>content</p>"
+	testTitle       = "Test"
+	testPath        = "book/test.mdx"
+	testOneHTML     = "<h1>One</h1>"
+	testThreeHTML   = "<h1>One</h1><h2>Two</h2><h3>Three</h3>"
+	testOneTwoHTML  = "<h1>One</h1><h2>Two</h2>"
+	testNoHeadings  = "<p>no headings</p>"
+)
+
 func TestDefaultValidatorValidate(t *testing.T) {
 	v := NewDefaultValidator()
 
 	t.Run("valid document", func(t *testing.T) {
 		doc := &Document{
-			Path: "book/test.mdx",
+			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
+				"id":    defaultIDValue,
 				"title": "Test Chapter",
 			},
-			HTML: "<h1>Title</h1><p>content</p>",
+			HTML: "<h1>Title</h1>" + testContentHTML,
 		}
 		errs := v.Validate(doc)
 		if len(errs) != 0 {
@@ -26,9 +36,9 @@ func TestDefaultValidatorValidate(t *testing.T) {
 
 	t.Run("missing id and title", func(t *testing.T) {
 		doc := &Document{
-			Path:        "book/test.mdx",
+			Path:        testPath,
 			Frontmatter: map[string]interface{}{},
-			HTML:        "<p>content</p>",
+			HTML:        testContentHTML,
 		}
 		errs := v.Validate(doc)
 		if len(errs) < 2 {
@@ -38,12 +48,12 @@ func TestDefaultValidatorValidate(t *testing.T) {
 
 	t.Run("invalid id format", func(t *testing.T) {
 		doc := &Document{
-			Path: "book/test.mdx",
+			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    "not-valid",
-				"title": "Test",
+				"id":              "not-valid",
+				defaultTitleField: testTitle,
 			},
-			HTML: "<p>content</p>",
+			HTML: testContentHTML,
 		}
 		errs := v.Validate(doc)
 		if len(errs) != 1 {
@@ -55,12 +65,12 @@ func TestDefaultValidatorValidate(t *testing.T) {
 		v2 := NewDefaultValidator()
 		v2.MaxHeadingDepth = 2
 		doc := &Document{
-			Path: "book/test.mdx",
+			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
-				"title": "Test",
+				"id":              "",
+				defaultTitleField: testTitle,
 			},
-			HTML: "<h1>One</h1><h2>Two</h2><h3>Three</h3>",
+			HTML: testContentHTML,
 		}
 		errs := v2.Validate(doc)
 		if len(errs) == 0 {
@@ -72,12 +82,12 @@ func TestDefaultValidatorValidate(t *testing.T) {
 		v3 := NewDefaultValidator()
 		v3.MaxHeadingDepth = 3
 		doc := &Document{
-			Path: "book/test.mdx",
+			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
-				"title": "Test",
+				"id":              defaultIDValue,
+				defaultTitleField: testTitle,
 			},
-			HTML: "<h1>One</h1><h2>Two</h2><h3>Three</h3>",
+			HTML: testThreeHTML,
 		}
 		errs := v3.Validate(doc)
 		if len(errs) != 0 {
@@ -87,12 +97,12 @@ func TestDefaultValidatorValidate(t *testing.T) {
 
 	t.Run("empty id field", func(t *testing.T) {
 		doc := &Document{
-			Path: "book/test.mdx",
+			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    "",
-				"title": "Test",
+				"id":              "",
+				defaultTitleField: testTitle,
 			},
-			HTML: "<p>content</p>",
+			HTML: testThreeHTML,
 		}
 		errs := v.Validate(doc)
 		if len(errs) != 2 {
@@ -108,10 +118,10 @@ func TestDefaultValidatorValidateAll(t *testing.T) {
 		{
 			Path: "book/ch1.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
+				"id":    defaultIDValue,
 				"title": "Chapter 1",
 			},
-			HTML: "<h1>One</h1>",
+			HTML: testOneHTML,
 		},
 		{
 			Path: "book/ch2.mdx",
@@ -119,7 +129,7 @@ func TestDefaultValidatorValidateAll(t *testing.T) {
 				"id":    "[2.0.0]",
 				"title": "Chapter 2",
 			},
-			HTML: "<h1>Two</h1>",
+			HTML: testOneHTML,
 		},
 	}
 
@@ -136,18 +146,18 @@ func TestDefaultValidatorDuplicateIDs(t *testing.T) {
 		{
 			Path: "book/ch1.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
+				"id":    defaultIDValue,
 				"title": "Chapter 1",
 			},
-			HTML: "<h1>One</h1>",
+			HTML: testOneHTML,
 		},
 		{
 			Path: "book/ch2.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    "[1.0.0]",
+				"id":    defaultIDValue,
 				"title": "Duplicate Chapter",
 			},
-			HTML: "<h1>Two</h1>",
+			HTML: testOneHTML,
 		},
 	}
 
@@ -169,10 +179,10 @@ func TestCountMaxHeadingDepth(t *testing.T) {
 		html   string
 		expect int
 	}{
-		{"<h1>One</h1><h2>Two</h2>", 2},
+		{testOneTwoHTML, 2},
 		{"<h1>One</h1><h2>Two</h2><h3>Three</h3><h4>Four</h4>", 4},
-		{"<p>no headings</p>", 0},
-		{"<h1>One</h1>", 1},
+		{testNoHeadings, 0},
+		{testOneHTML, 1},
 	}
 	for _, tt := range tests {
 		got := countMaxHeadingDepth(tt.html)
