@@ -16,10 +16,9 @@ import (
 )
 
 type Section struct {
-	ID       string
-	Title    string
-	Content  string
-	Icon     string
+	ID      string
+	Title   string
+	Content string
 }
 
 func main() {
@@ -30,22 +29,12 @@ func main() {
 	}
 
 	mdRenderer := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			meta.Meta,
-		),
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(),
-		),
-		goldmark.WithRendererOptions(
-			goldmarkHtml.WithHardWraps(),
-			goldmarkHtml.WithUnsafe(),
-		),
+		goldmark.WithExtensions(extension.GFM, meta.Meta),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithRendererOptions(goldmarkHtml.WithHardWraps(), goldmarkHtml.WithUnsafe()),
 	)
 
-	sections := []Section{
-		heroSection(),
-	}
+	sections := []Section{heroSection()}
 
 	readme, _ := os.ReadFile(filepath.Join(root, "README.md"))
 	sections = append(sections, readmeSections(readme, mdRenderer)...)
@@ -56,12 +45,9 @@ func main() {
 	changelog, _ := os.ReadFile(filepath.Join(root, "CHANGELOG.md"))
 	sections = append(sections, changelogSection(changelog, mdRenderer)...)
 
-	html := buildHTML(sections)
-
 	outDir := filepath.Join(root, "_site")
 	os.MkdirAll(outDir, 0755)
-	os.WriteFile(filepath.Join(outDir, "index.html"), []byte(html), 0644)
-
+	os.WriteFile(filepath.Join(outDir, "index.html"), []byte(buildHTML(sections)), 0644)
 	fmt.Println("Documentation site generated at _site/index.html")
 }
 
@@ -83,22 +69,40 @@ func findRepoRoot() (string, error) {
 }
 
 func heroSection() Section {
+	ascii := `                             .__
+  ____   ______             ______  |  |   _____  ____  __ __
+ / ___\ /  ___/  ______   /  ___/  |  |   \__  \ \__  \|  |  \
+/ /_/  >\___ \  /_____/   \___ \   |  |__  / __ \_/ __ \   Y  \
+\___  /____  >           /____  >  |____/ (____  (____  /___|  /
+/_____/    \/                 \/               \/     \/     \/
+`
 	return Section{
 		ID:    "hero",
 		Title: "go-pretty-pdf",
-		Content: `<p class="hero-tagline">Transform a directory of MDX files into a beautiful, print-ready PDF via headless Chrome.</p>
-<div class="hero-badges">
-<a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf"><img src="https://pkg.go.dev/badge/github.com/sazardev/go-pretty-pdf.svg" alt="Go Reference"></a>
-<a href="https://github.com/sazardev/go-pretty-pdf/actions/workflows/ci.yml"><img src="https://github.com/sazardev/go-pretty-pdf/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-<a href="https://goreportcard.com/report/github.com/sazardev/go-pretty-pdf"><img src="https://goreportcard.com/badge/github.com/sazardev/go-pretty-pdf" alt="Go Report Card"></a>
-<a href="https://github.com/sazardev/go-pretty-pdf/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+		Content: `<pre class="hero-ascii">` + ascii + `</pre>
+<div class="hero-line"></div>
+<p class="hero-tagline">Transform a directory of MDX files into a beautiful, print-ready PDF via headless Chrome.</p>
+<div class="hero-meta">
+  <span>Library + CLI</span>
+  <span>Go 1.26+</span>
+  <span>MIT</span>
 </div>
 <div class="hero-install">
-<p>Install the CLI:</p>
-<pre class="install-cmd"><code>go install github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf@latest</code></pre>
-<p>Or use as a library:</p>
-<pre class="install-cmd"><code>go get github.com/sazardev/go-pretty-pdf</code></pre>
-</div>`,
+  <div class="install-block">
+    <span class="install-label">CLI</span>
+    <pre class="install-cmd"><code>$ go install github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf@latest</code></pre>
+  </div>
+  <div class="install-block">
+    <span class="install-label">Library</span>
+    <pre class="install-cmd"><code>$ go get github.com/sazardev/go-pretty-pdf</code></pre>
+  </div>
+</div>
+<p class="hero-requirements">
+  Requires Chrome or Chromium for PDF rendering.
+  <a href="#getting-started">Get started</a> &middot;
+  <a href="https://github.com/sazardev/go-pretty-pdf">GitHub</a> &middot;
+  <a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">pkg.go.dev</a>
+</p>`,
 	}
 }
 
@@ -113,32 +117,24 @@ func renderMarkdown(src []byte, md goldmark.Markdown) string {
 func readmeSections(src []byte, md goldmark.Markdown) []Section {
 	html := renderMarkdown(src, md)
 	parts := splitByHeadings(html)
-	var sections []Section
 
-	sectionMap := map[string]struct {
-		Title string
-		Icon  string
-	}{
-		"install":                      {"Installation", "📥"},
-		"quick-start":                  {"Quick Start", "🚀"},
-		"how-it-works":                 {"How It Works", "⚙️"},
-		"mdx-format":                   {"MDX Format", "📝"},
-		"built-in-components":          {"Built-in Components", "🧩"},
-		"configuration":                {"Configuration", "🔧"},
-		"library-api":                  {"Library API", "💻"},
-		"themes":                       {"Themes", "🎨"},
-		"cli-reference":                {"CLI Reference", "🖥️"},
+	sectionMap := map[string]string{
+		"install":              "Installation",
+		"quick-start":          "Quick Start",
+		"how-it-works":         "How It Works",
+		"mdx-format":           "MDX Format",
+		"built-in-components":  "Built-in Components",
+		"configuration":        "Configuration",
+		"library-api":          "Library API",
+		"themes":               "Themes",
+		"cli-reference":        "CLI Reference",
 	}
 
+	var sections []Section
 	for _, part := range parts {
 		id := anchorFromHeading(part.Heading)
-		if info, ok := sectionMap[id]; ok {
-			sections = append(sections, Section{
-				ID:      id,
-				Title:   info.Title,
-				Icon:    info.Icon,
-				Content: part.Body,
-			})
+		if title, ok := sectionMap[id]; ok {
+			sections = append(sections, Section{ID: id, Title: title, Content: part.Body})
 		}
 	}
 	return sections
@@ -147,60 +143,43 @@ func readmeSections(src []byte, md goldmark.Markdown) []Section {
 func cliSections(src []byte, md goldmark.Markdown) []Section {
 	html := renderMarkdown(src, md)
 	parts := splitByHeadings(html)
+
+	sectionMap := map[string]string{
+		"overview":           "CLI Overview",
+		"requirements":       "Requirements",
+		"usage":              "Usage",
+		"global-flags":       "Global Flags",
+		"commands":           "Commands",
+		"config-file":        "Config File",
+		"themes":             "Themes",
+		"template-variables": "Template Variables",
+		"environment":        "Environment",
+		"exit-codes":         "Exit Codes",
+	}
+
 	var sections []Section
-
-	sectionMap := map[string]struct {
-		Title string
-		Icon  string
-	}{
-		"overview":           {"CLI Overview", "📋"},
-		"requirements":       {"Requirements", "✅"},
-		"usage":              {"Usage", "⌨️"},
-		"global-flags":       {"Global Flags", "🏷️"},
-		"commands":           {"Commands", "📟"},
-		"config-file":        {"Config File", "⚙️"},
-		"themes":             {"Themes", "🎨"},
-		"template-variables": {"Template Variables", "📊"},
-		"environment":        {"Environment", "🌍"},
-		"exit-codes":         {"Exit Codes", "🚪"},
-	}
-
 	for _, part := range parts {
 		id := anchorFromHeading(part.Heading)
-		if info, ok := sectionMap[id]; ok {
-			sections = append(sections, Section{
-				ID:      "cli-" + id,
-				Title:   info.Title,
-				Icon:    info.Icon,
-				Content: part.Body,
-			})
+		if title, ok := sectionMap[id]; ok {
+			sections = append(sections, Section{ID: "cli-" + id, Title: title, Content: part.Body})
 		}
-	}
-
-	// Individual command subsections (h3s inside the Commands section)
-	for _, part := range parts {
-		id := anchorFromHeading(part.Heading)
 		if id == "commands" {
 			cmdSubs := splitByH3(part.Body)
-			cmdMap := map[string]struct {
-				Title string
-				Icon  string
-			}{
-				"build":      {"build — Generate PDF", "📦"},
-				"check":      {"check — Validate MDX", "🔍"},
-				"init":       {"init — Scaffold Project", "✨"},
-				"serve":      {"serve — Live Preview", "🌐"},
-				"watch":      {"watch — Auto-Rebuild", "👀"},
-				"version":    {"version — Print Version", "📌"},
-				"completion": {"completion — Shell Scripts", "🔤"},
+			cmdMap := map[string]string{
+				"build":      "build",
+				"check":      "check",
+				"init":       "init",
+				"serve":      "serve",
+				"watch":      "watch",
+				"version":    "version",
+				"completion": "completion",
 			}
 			for _, sub := range cmdSubs {
 				subID := anchorFromHeading(sub.Heading)
-				if info, ok := cmdMap[subID]; ok {
+				if cmdLabel, ok := cmdMap[subID]; ok {
 					sections = append(sections, Section{
 						ID:      "cmd-" + subID,
-						Title:   info.Title,
-						Icon:    info.Icon,
+						Title:   "pretty-pdf " + cmdLabel,
 						Content: sub.Body,
 					})
 				}
@@ -211,12 +190,10 @@ func cliSections(src []byte, md goldmark.Markdown) []Section {
 }
 
 func changelogSection(src []byte, md goldmark.Markdown) []Section {
-	html := renderMarkdown(src, md)
 	return []Section{{
 		ID:      "changelog",
 		Title:   "Changelog",
-		Icon:    "📜",
-		Content: html,
+		Content: renderMarkdown(src, md),
 	}}
 }
 
@@ -243,22 +220,16 @@ func splitByH3(html string) []headingPart {
 			continue
 		}
 		contentStart := om[1] + bodyStart[1]
-
-		var contentEnd int
+		contentEnd := len(html)
 		if i+1 < len(openMatches) {
 			contentEnd = openMatches[i+1][0]
-		} else {
-			contentEnd = len(html)
 		}
-
 		headingMatch := headingTextRe.FindStringSubmatch(html[om[0]:contentStart])
 		heading := ""
 		if len(headingMatch) >= 2 {
 			heading = headingMatch[1]
 		}
-
-		body := strings.TrimSpace(html[contentStart:contentEnd])
-		parts[i] = headingPart{Heading: heading, Level: 3, Body: body}
+		parts[i] = headingPart{Heading: heading, Level: 3, Body: strings.TrimSpace(html[contentStart:contentEnd])}
 	}
 	return parts
 }
@@ -280,58 +251,44 @@ func splitByHeadings(html string) []headingPart {
 			continue
 		}
 		contentStart := om[1] + bodyStart[1]
-
-		var contentEnd int
+		contentEnd := len(html)
 		if i+1 < len(openMatches) {
 			contentEnd = openMatches[i+1][0]
-		} else {
-			contentEnd = len(html)
 		}
-
 		headingMatch := headingTextRe.FindStringSubmatch(html[om[0]:contentStart])
 		heading := ""
 		if len(headingMatch) >= 2 {
 			heading = headingMatch[1]
 		}
-
-		body := strings.TrimSpace(html[contentStart:contentEnd])
-		parts[i] = headingPart{Heading: heading, Level: 2, Body: body}
+		parts[i] = headingPart{Heading: heading, Level: 2, Body: strings.TrimSpace(html[contentStart:contentEnd])}
 	}
 	return parts
 }
 
 func anchorFromHeading(html string) string {
-	lower := strings.ToLower(html)
-	lower = stripHTMLTags(lower)
-	lower = strings.TrimSpace(lower)
-	re := regexp.MustCompile(`[^a-z0-9]+`)
-	slug := re.ReplaceAllString(lower, "-")
-	slug = strings.Trim(slug, "-")
-	return slug
+	lower := strings.ToLower(stripHTMLTags(html))
+	slug := regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(strings.TrimSpace(lower), "-")
+	return strings.Trim(slug, "-")
 }
 
 func stripHTMLTags(s string) string {
-	re := regexp.MustCompile(`<[^>]+>`)
-	return re.ReplaceAllString(s, "")
+	return regexp.MustCompile(`<[^>]+>`).ReplaceAllString(s, "")
 }
 
 func buildHTML(sections []Section) string {
 	n := len(sections)
 	navItems := make([]string, n)
-	for i, s := range sections {
-		navItems[i] = fmt.Sprintf(
-			`<a href="#%s">%s %s</a>`, s.ID, s.Icon, s.Title)
-	}
-
 	bodyParts := make([]string, n)
+
 	for i, s := range sections {
-		wrapperClass := "section"
+		navItems[i] = fmt.Sprintf(`<a href="#%s">%s</a>`, s.ID, s.Title)
+		cls := "section"
 		if s.ID == "hero" {
-			wrapperClass = "section hero-section"
+			cls = "section hero-section"
 		}
 		bodyParts[i] = fmt.Sprintf(
-			`<section id="%s" class="%s"><h2>%s %s</h2><div class="section-content">%s</div></section>`,
-			s.ID, wrapperClass, s.Icon, s.Title, s.Content)
+			`<section id="%s" class="%s"><h2>%s</h2><div class="section-content">%s</div></section>`,
+			s.ID, cls, s.Title, s.Content)
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
@@ -339,25 +296,25 @@ func buildHTML(sections []Section) string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>go-pretty-pdf — Documentation</title>
-<meta name="description" content="Transform MDX files into beautiful, print-ready PDFs via headless Chrome. Library + CLI for Go.">
+<title>go-pretty-pdf &mdash; Documentation</title>
+<meta name="description" content="Transform MDX files into beautiful, print-ready PDFs via headless Chrome.">
 <style>
 %s
 </style>
 </head>
 <body>
 <nav class="sidebar">
-  <div class="sidebar-header">
-    <a href="#hero" class="sidebar-logo">go-pretty-pdf</a>
+  <div class="sidebar-brand">
+    <a href="#hero">go-pretty-pdf</a>
   </div>
-  <div class="sidebar-links">
+  <div class="sidebar-nav">
     %s
   </div>
 </nav>
-<main class="content">
+<main class="main">
   %s
-  <footer class="page-footer">
-    <p>Generated from source. <a href="https://github.com/sazardev/go-pretty-pdf">GitHub</a> &middot; <a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">Go Package</a></p>
+  <footer class="footer">
+    <p>Generated from source &mdash; <a href="https://github.com/sazardev/go-pretty-pdf">GitHub</a> &middot; <a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">pkg.go.dev</a></p>
   </footer>
 </main>
 </body>
@@ -365,282 +322,337 @@ func buildHTML(sections []Section) string {
 }
 
 func css() string {
-	return strings.TrimSpace(`
+	return `
 :root {
-  --bg: #0d1117;
-  --bg-secondary: #161b22;
-  --bg-tertiary: #21262d;
-  --border: #30363d;
-  --text: #c9d1d9;
-  --text-muted: #8b949e;
-  --text-heading: #f0f6fc;
-  --accent: #58a6ff;
-  --accent-hover: #79c0ff;
-  --green: #3fb950;
-  --orange: #d2991d;
-  --red: #f85149;
-  --code-bg: #1c2128;
-  --code-text: #c9d1d9;
-  --sidebar-width: 260px;
-  --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --bg:            #fafafa;
+  --bg-card:       #ffffff;
+  --bg-hover:      #f0f0f0;
+  --border:        #e5e5e5;
+  --border-light:  #f0f0f0;
+  --text:          #1a1a1a;
+  --text-secondary:#555555;
+  --text-muted:    #888888;
+  --accent:        #4f46e5;
+  --accent-light:  #818cf8;
+  --accent-bg:     #eef2ff;
+  --code-bg:       #1e1e2e;
+  --code-text:     #cdd6f4;
+  --inline-bg:     #f0f0f5;
+  --inline-text:   #4f46e5;
+  --green:         #059669;
+  --sidebar-w:     250px;
+  --radius:        6px;
+  --font:          -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:     'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; scroll-padding-top: 2rem; }
+html { scroll-behavior: smooth; scroll-padding-top: 3rem; }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font);
   background: var(--bg);
   color: var(--text);
-  line-height: 1.7;
+  line-height: 1.75;
   display: flex;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-hover); text-decoration: underline; }
+a { color: var(--accent); text-decoration: none; transition: color .15s; }
+a:hover { color: var(--accent-light); }
+
+/*** Sidebar ***/
 
 .sidebar {
-  position: fixed;
-  top: 0; left: 0;
-  width: var(--sidebar-width);
-  height: 100vh;
-  background: var(--bg-secondary);
+  position: fixed; top: 0; left: 0;
+  width: var(--sidebar-w); height: 100vh;
+  background: var(--bg-card);
   border-right: 1px solid var(--border);
   overflow-y: auto;
-  z-index: 10;
-  padding: 1.5rem 0;
+  padding: 2rem 0 1.5rem;
+  z-index: 100;
 }
-.sidebar-header {
-  padding: 0.5rem 1.25rem 1rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0.5rem;
+.sidebar-brand {
+  padding: 0 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: .75rem;
 }
-.sidebar-logo {
-  font-size: 1.1rem;
+.sidebar-brand a {
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--text-heading) !important;
-  text-decoration: none !important;
+  font-family: var(--font-mono);
+  color: var(--text) !important;
+  letter-spacing: -.01em;
 }
-.sidebar-links { padding: 0.5rem 0; }
-.sidebar-links a {
+.sidebar-nav { padding: .25rem 0; }
+.sidebar-nav a {
   display: block;
-  padding: 0.4rem 1.25rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  padding: .35rem 1.5rem;
+  font-size: .8rem;
+  color: var(--text-secondary);
   border-left: 2px solid transparent;
-  transition: all 0.15s;
+  transition: all .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.sidebar-links a:hover {
+.sidebar-nav a:hover {
   color: var(--text);
-  background: var(--bg-tertiary);
+  background: var(--bg-hover);
   border-left-color: var(--accent);
-  text-decoration: none;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/*** Main ***/
+
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  max-width: 800px;
+  padding: 3rem 4rem 3rem;
 }
 
-.content {
-  margin-left: var(--sidebar-width);
-  flex: 1;
-  max-width: 860px;
-  padding: 3rem 3rem 3rem 4rem;
-}
+/*** Hero ***/
 
 .hero-section {
-  padding: 4rem 0;
+  padding: 2rem 0 3rem;
+  margin-bottom: 3rem;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 2rem;
+}
+.hero-ascii {
+  font-family: var(--font-mono);
+  font-size: .55rem;
+  line-height: 1.3;
+  color: var(--accent);
+  white-space: pre;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  opacity: .85;
 }
 .hero-section h2 {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 800;
-  color: var(--text-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -.025em;
+  margin-bottom: .25rem;
+  color: var(--text);
+}
+.hero-line {
+  width: 48px; height: 3px;
+  background: var(--accent);
+  border-radius: 3px;
+  margin: 1rem 0 1.5rem;
+  animation: heroLineGrow .8s ease-out;
+}
+@keyframes heroLineGrow {
+  from { width: 0; opacity: 0; }
+  to   { width: 48px; opacity: 1; }
 }
 .hero-tagline {
-  font-size: 1.15rem;
-  color: var(--text-muted);
-  margin: 1rem 0 1.5rem;
-  line-height: 1.6;
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+  max-width: 560px;
 }
-.hero-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.hero-meta {
+  display: flex; gap: 1.5rem;
   margin-bottom: 2rem;
 }
-.hero-badges img { height: 20px; }
-.hero-install p {
+.hero-meta span {
+  font-size: .8rem;
+  font-weight: 600;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  margin: 0.75rem 0 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: .2rem .75rem;
+  background: var(--accent-bg);
+  border-radius: 99px;
+}
+.hero-install {
+  margin-bottom: 1.5rem;
+}
+.install-block {
+  margin-bottom: .75rem;
+}
+.install-label {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: .3rem;
+  display: inline-block;
 }
 .install-cmd {
   background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--text);
+  font-size: .78rem;
+  color: var(--code-text);
   overflow-x: auto;
 }
-.install-cmd code {
-  background: none;
-  padding: 0;
-  border: none;
-  font-size: inherit;
+.install-cmd code { background: none; padding: 0; border: none; font-size: inherit; color: inherit; }
+.hero-requirements {
+  font-size: .82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
+/*** Sections ***/
+
 .section {
-  margin-bottom: 3rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 3.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border-light);
 }
 .section:last-of-type { border-bottom: none; }
 .section h2 {
-  font-size: 1.5rem;
-  color: var(--text-heading);
-  margin-bottom: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  letter-spacing: -.015em;
 }
 .section h3 {
-  font-size: 1.15rem;
-  color: var(--text-heading);
-  margin: 1.75rem 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 1.75rem 0 .75rem;
   font-weight: 600;
 }
 .section h4 {
-  font-size: 1rem;
-  color: var(--text-heading);
-  margin: 1.25rem 0 0.5rem;
+  font-size: .92rem;
+  color: var(--text);
+  margin: 1.25rem 0 .5rem;
   font-weight: 600;
 }
-.section p {
-  margin: 0.75rem 0;
-  color: var(--text);
-}
+.section p { margin: .75rem 0; color: var(--text); }
+
+/*** Content elements ***/
 
 .section-content table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100%; border-collapse: collapse;
   margin: 1rem 0 1.5rem;
-  font-size: 0.9rem;
+  font-size: .85rem;
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 .section-content table th,
 .section-content table td {
-  border: 1px solid var(--border);
-  padding: 0.5rem 0.85rem;
+  padding: .55rem .85rem;
   text-align: left;
+  border-bottom: 1px solid var(--border-light);
 }
 .section-content table th {
-  background: var(--bg-tertiary);
-  color: var(--text-heading);
+  background: var(--accent-bg);
+  color: var(--accent);
   font-weight: 600;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
-.section-content table tr:nth-child(even) { background: var(--bg-secondary); }
+.section-content table td { background: var(--bg-card); }
+.section-content table tr:last-child td { border-bottom: none; }
 
 .section-content pre {
   background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1rem;
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem;
   overflow-x: auto;
   margin: 1rem 0;
 }
 .section-content pre code {
   font-family: var(--font-mono);
-  font-size: 0.825rem;
-  line-height: 1.55;
+  font-size: .78rem;
+  line-height: 1.6;
   color: var(--code-text);
-  background: none;
-  padding: 0;
+  background: none; padding: 0; border: none;
 }
 .section-content code {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  background: var(--code-bg);
-  padding: 0.15em 0.4em;
+  font-size: .82rem;
+  background: var(--inline-bg);
+  color: var(--inline-text);
+  padding: .12em .45em;
   border-radius: 3px;
-  border: 1px solid var(--border);
 }
 .section-content pre code {
-  border: none;
-  padding: 0;
   background: none;
+  color: var(--code-text);
+  padding: 0;
+  border-radius: 0;
 }
-.section-content ul, .section-content ol {
-  padding-left: 1.5rem;
-  margin: 0.75rem 0;
-}
-.section-content li { margin: 0.3rem 0; }
+.section-content ul, .section-content ol { padding-left: 1.4rem; margin: .75rem 0; }
+.section-content li { margin: .3rem 0; }
+.section-content li::marker { color: var(--text-muted); }
 .section-content blockquote {
-  border-left: 3px solid var(--accent);
-  padding: 0.5rem 1rem;
+  border-left: 3px solid var(--accent-light);
+  padding: .5rem 1rem;
   margin: 1rem 0;
-  color: var(--text-muted);
-  background: var(--bg-secondary);
-  border-radius: 0 4px 4px 0;
+  color: var(--text-secondary);
+  background: var(--accent-bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-style: italic;
 }
-.section-content hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2rem 0;
-}
+.section-content hr { border: none; border-top: 1px solid var(--border-light); margin: 2rem 0; }
 .section-content img { max-width: 100%; }
-.section-content input[type="checkbox"] {
-  margin-right: 0.4rem;
-  accent-color: var(--accent);
-}
-
+.section-content input[type="checkbox"] { margin-right: .35rem; accent-color: var(--accent); }
 .section-content a[href*="github.com"]::after {
-  content: " ↗";
-  font-size: 0.7rem;
-  opacity: 0.5;
-}
-.section-content h2 a[href^="#"],
-.section-content h3 a[href^="#"],
-.sidebar-links a::after,
-.sidebar-logo::after,
-.page-footer a::after {
-  content: none !important;
+  content: " \2197";
+  font-size: .65rem; opacity: .4; font-style: normal;
 }
 
-.page-footer {
-  margin-top: 3rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+/*** Footer ***/
+
+.footer {
+  margin-top: 3rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--border-light);
   text-align: center;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: .8rem;
 }
+.footer a { font-weight: 500; }
+
+/*** Animations ***/
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.section:not(.hero-section) {
+  animation: fadeSlideUp .5s ease-out both;
+}
+.section:nth-child(2)  { animation-delay: .05s; }
+.section:nth-child(3)  { animation-delay: .1s;  }
+.section:nth-child(4)  { animation-delay: .15s; }
+.section:nth-child(5)  { animation-delay: .2s;  }
+.section:nth-child(6)  { animation-delay: .25s; }
+.section:nth-child(7)  { animation-delay: .3s;  }
+.section:nth-child(8)  { animation-delay: .35s; }
+.section:nth-child(9)  { animation-delay: .4s;  }
+.section:nth-child(10) { animation-delay: .45s; }
+.section:nth-child(11) { animation-delay: .5s;  }
+.section:nth-child(12) { animation-delay: .55s; }
+.section:nth-child(13) { animation-delay: .6s;  }
+.section:nth-child(14) { animation-delay: .65s; }
+.section:nth-child(15) { animation-delay: .7s;  }
+
+/*** Responsive ***/
 
 @media (max-width: 900px) {
   body { flex-direction: column; }
   .sidebar {
-    position: relative;
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1rem;
+    position: relative; width: 100%; height: auto;
+    border-right: none; border-bottom: 1px solid var(--border);
+    padding: .75rem 1rem;
   }
-  .sidebar-header {
-    padding: 0;
-    border-bottom: none;
-    margin-bottom: 0;
-  }
-  .sidebar-links {
-    display: none;
-  }
-  .content {
-    margin-left: 0;
-    padding: 1.5rem;
-  }
+  .sidebar-brand { padding: 0; border-bottom: none; margin-bottom: 0; }
+  .sidebar-nav { display: none; }
+  .main { margin-left: 0; padding: 1.5rem; }
   .hero-section h2 { font-size: 1.75rem; }
 }
-`)
+`
 }
-
-
