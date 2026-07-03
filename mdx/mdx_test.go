@@ -273,7 +273,7 @@ depends_on: ["[1.0.0]"]
 		t.Fatalf("expected 3 docs, got %d", len(docs))
 	}
 
-	if docs[0].ID() != "[1.0.0]" {
+	if docs[0].ID() != defaultIDValue {
 		t.Errorf("expected first doc [1.0.0], got %s", docs[0].ID())
 	}
 	if docs[1].ID() != "[1.1.0]" {

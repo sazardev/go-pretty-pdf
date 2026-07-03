@@ -23,8 +23,8 @@ func TestDefaultValidatorValidate(t *testing.T) {
 		doc := &Document{
 			Path: testPath,
 			Frontmatter: map[string]interface{}{
-				"id":    defaultIDValue,
-				"title": "Test Chapter",
+				"id":              defaultIDValue,
+				defaultTitleField: "Test Chapter",
 			},
 			HTML: "<h1>Title</h1>" + testContentHTML,
 		}
@@ -118,16 +118,16 @@ func TestDefaultValidatorValidateAll(t *testing.T) {
 		{
 			Path: "book/ch1.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    defaultIDValue,
-				"title": "Chapter 1",
+				"id":              defaultIDValue,
+				defaultTitleField: "Chapter 1",
 			},
 			HTML: testOneHTML,
 		},
 		{
 			Path: "book/ch2.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    "[2.0.0]",
-				"title": "Chapter 2",
+				"id":              "[2.0.0]",
+				defaultTitleField: "Chapter 2",
 			},
 			HTML: testOneHTML,
 		},
@@ -146,16 +146,16 @@ func TestDefaultValidatorDuplicateIDs(t *testing.T) {
 		{
 			Path: "book/ch1.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    defaultIDValue,
-				"title": "Chapter 1",
+				"id":              defaultIDValue,
+				defaultTitleField: "Chapter 1",
 			},
 			HTML: testOneHTML,
 		},
 		{
 			Path: "book/ch2.mdx",
 			Frontmatter: map[string]interface{}{
-				"id":    defaultIDValue,
-				"title": "Duplicate Chapter",
+				"id":              defaultIDValue,
+				defaultTitleField: "Duplicate Chapter",
 			},
 			HTML: testOneHTML,
 		},
