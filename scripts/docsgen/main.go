@@ -316,22 +316,22 @@ func stripHTMLTags(s string) string {
 }
 
 func buildHTML(sections []Section) string {
-	var navItems []string
-	for _, s := range sections {
-		navItems = append(navItems, fmt.Sprintf(
-			`<a href="#%s">%s %s</a>`, s.ID, s.Icon, s.Title))
+	n := len(sections)
+	navItems := make([]string, n)
+	for i, s := range sections {
+		navItems[i] = fmt.Sprintf(
+			`<a href="#%s">%s %s</a>`, s.ID, s.Icon, s.Title)
 	}
 
-	// Body content
-	var bodyParts []string
-	for _, s := range sections {
+	bodyParts := make([]string, n)
+	for i, s := range sections {
 		wrapperClass := "section"
 		if s.ID == "hero" {
 			wrapperClass = "section hero-section"
 		}
-		bodyParts = append(bodyParts, fmt.Sprintf(
+		bodyParts[i] = fmt.Sprintf(
 			`<section id="%s" class="%s"><h2>%s %s</h2><div class="section-content">%s</div></section>`,
-			s.ID, wrapperClass, s.Icon, s.Title, s.Content))
+			s.ID, wrapperClass, s.Icon, s.Title, s.Content)
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
