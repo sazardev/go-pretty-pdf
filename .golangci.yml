@@ -9,14 +9,12 @@ linters:
     - bodyclose
     - errcheck
     - goconst
-    - gosimple
     - govet
     - ineffassign
     - misspell
     - nilerr
     - prealloc
     - staticcheck
-    - tenv
     - unconvert
     - unused
   settings:
