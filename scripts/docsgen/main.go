@@ -34,20 +34,26 @@ func main() {
 		goldmark.WithRendererOptions(goldmarkHtml.WithHardWraps(), goldmarkHtml.WithUnsafe()),
 	)
 
-	sections := []Section{heroSection()}
-
 	readme, _ := os.ReadFile(filepath.Join(root, "README.md"))
-	sections = append(sections, readmeSections(readme, mdRenderer)...)
-
 	cli, _ := os.ReadFile(filepath.Join(root, "docs", "cli.md"))
-	sections = append(sections, cliSections(cli, mdRenderer)...)
-
 	changelog, _ := os.ReadFile(filepath.Join(root, "CHANGELOG.md"))
+
+	sections := make([]Section, 1, 28)
+	sections[0] = heroSection()
+	sections = append(sections, readmeSections(readme, mdRenderer)...)
+	sections = append(sections, cliSections(cli, mdRenderer)...)
 	sections = append(sections, changelogSection(changelog, mdRenderer)...)
 
+	html := buildHTML(sections)
 	outDir := filepath.Join(root, "_site")
-	os.MkdirAll(outDir, 0755)
-	os.WriteFile(filepath.Join(outDir, "index.html"), []byte(buildHTML(sections)), 0644)
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "error creating output directory: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "index.html"), []byte(html), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "error writing index.html: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Println("Documentation site generated at _site/index.html")
 }
 
@@ -119,18 +125,18 @@ func readmeSections(src []byte, md goldmark.Markdown) []Section {
 	parts := splitByHeadings(html)
 
 	sectionMap := map[string]string{
-		"install":              "Installation",
-		"quick-start":          "Quick Start",
-		"how-it-works":         "How It Works",
-		"mdx-format":           "MDX Format",
-		"built-in-components":  "Built-in Components",
-		"configuration":        "Configuration",
-		"library-api":          "Library API",
-		"themes":               "Themes",
-		"cli-reference":        "CLI Reference",
+		"install":             "Installation",
+		"quick-start":         "Quick Start",
+		"how-it-works":        "How It Works",
+		"mdx-format":          "MDX Format",
+		"built-in-components": "Built-in Components",
+		"configuration":       "Configuration",
+		"library-api":         "Library API",
+		"themes":              "Themes",
+		"cli-reference":       "CLI Reference",
 	}
 
-	var sections []Section
+	sections := make([]Section, 0, len(sectionMap))
 	for _, part := range parts {
 		id := anchorFromHeading(part.Heading)
 		if title, ok := sectionMap[id]; ok {
@@ -157,7 +163,7 @@ func cliSections(src []byte, md goldmark.Markdown) []Section {
 		"exit-codes":         "Exit Codes",
 	}
 
-	var sections []Section
+	sections := make([]Section, 0, 17)
 	for _, part := range parts {
 		id := anchorFromHeading(part.Heading)
 		if title, ok := sectionMap[id]; ok {
