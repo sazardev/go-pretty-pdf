@@ -45,6 +45,7 @@ jobs:
         with:
           go-version: "1.26"
       - run: go test -race -coverprofile=coverage.out ./...
+        shell: bash
 
   vet:
     runs-on: ubuntu-latest
