@@ -54,8 +54,7 @@ func deepDiveHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<aside class="component-deep-dive">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-deep-dive-title">%s</div>`, html.EscapeString(attrs["title"])))
-		buf.WriteString("\n")
+		fmt.Fprintf(&buf, `<div class="component-deep-dive-title">%s</div>`+"\n", html.EscapeString(attrs["title"]))
 	}
 	buf.WriteString(rewriteInlineContent(inner))
 	buf.WriteString("</aside>")
@@ -66,8 +65,7 @@ func warningHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<div class="component-warning">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-warning-title">%s</div>`, html.EscapeString(attrs["title"])))
-		buf.WriteString("\n")
+		fmt.Fprintf(&buf, `<div class="component-warning-title">%s</div>`+"\n", html.EscapeString(attrs["title"]))
 	}
 	buf.WriteString(rewriteInlineContent(inner))
 	buf.WriteString("</div>")
@@ -78,8 +76,7 @@ func axiomHandler(attrs map[string]string, inner string) string {
 	var buf strings.Builder
 	buf.WriteString(`<blockquote class="component-axiom">`)
 	if attrs["title"] != "" {
-		buf.WriteString(fmt.Sprintf(`<div class="component-axiom-title">%s</div>`, html.EscapeString(attrs["title"])))
-		buf.WriteString("\n")
+		fmt.Fprintf(&buf, `<div class="component-axiom-title">%s</div>`+"\n", html.EscapeString(attrs["title"]))
 	}
 	buf.WriteString(rewriteInlineContent(inner))
 	buf.WriteString("</blockquote>")
@@ -95,5 +92,3 @@ func rewriteInlineContent(content string) string {
 	result = strings.ReplaceAll(result, "\n", "<br>\n")
 	return result
 }
-
-

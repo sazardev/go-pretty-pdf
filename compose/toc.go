@@ -32,11 +32,11 @@ func buildTOC(docs []*mdx.Document) string {
 
 		if isH1 && !seenH1[h1Key] {
 			seenH1[h1Key] = true
-			buf.WriteString(fmt.Sprintf(`<div class="toc-h1">%s</div>`+"\n", link))
+			fmt.Fprintf(&buf, `<div class="toc-h1">%s</div>`+"\n", link)
 		} else if isH2 {
-			buf.WriteString(fmt.Sprintf(`<div class="toc-h2">%s</div>`+"\n", link))
+			fmt.Fprintf(&buf, `<div class="toc-h2">%s</div>`+"\n", link)
 		} else {
-			buf.WriteString(fmt.Sprintf(`<div class="toc-h3">%s</div>`+"\n", link))
+			fmt.Fprintf(&buf, `<div class="toc-h3">%s</div>`+"\n", link)
 		}
 	}
 

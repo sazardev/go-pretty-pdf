@@ -27,14 +27,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if jsonOutput {
-		return runInitBare(targetDir, "My Book", "go-pretty-pdf", "default", "book", true)
+		return runInitBare(targetDir, "My Book", "go-pretty-pdf", defaultTheme, "book", true)
 	}
 
 	var (
 		bookTitle   string
 		authorName  string
 		themeChoice string
-		sourceDir   string
+		srcDir      string
 	)
 
 	form := huh.NewForm(
@@ -55,7 +55,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 				Title(output.HeadingStyle.Render("Theme")).
 				Description(output.MutedStyle.Render("Visual theme for your PDF")).
 				Options(
-					huh.NewOption("Default — clean, professional look", "default"),
+					huh.NewOption("Default — clean, professional look", defaultTheme),
 					huh.NewOption("Minimal — stripped down, no extras", "minimal"),
 				).
 				Value(&themeChoice),
@@ -64,7 +64,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 				Title(output.HeadingStyle.Render("Source Directory")).
 				Description(output.MutedStyle.Render("Where your MDX files will live")).
 				Placeholder("book").
-				Value(&sourceDir),
+				Value(&srcDir),
 
 			huh.NewConfirm().
 				Title(output.HeadingStyle.Render("Create Project?")).
@@ -75,7 +75,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	).WithTheme(huh.ThemeCharm())
 
 	if err := form.Run(); err != nil {
-		return fmt.Errorf("form cancelled: %w", err)
+		return fmt.Errorf("form canceled: %w", err)
 	}
 
 	if bookTitle == "" {
@@ -85,23 +85,23 @@ func runInit(cmd *cobra.Command, args []string) error {
 		authorName = "go-pretty-pdf"
 	}
 	if themeChoice == "" {
-		themeChoice = "default"
+		themeChoice = defaultTheme
 	}
-	if sourceDir == "" {
-		sourceDir = "book"
+	if srcDir == "" {
+		srcDir = "book"
 	}
 
 	if !quiet {
 		fmt.Println()
 		spinner := output.StartSpinner("Scaffolding project...")
-		if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, sourceDir); err != nil {
+		if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, srcDir); err != nil {
 			spinner.Fail(err.Error())
 			return err
 		}
 		spinner.Done("Project scaffolded!")
 		fmt.Println()
 	} else {
-		if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, sourceDir); err != nil {
+		if err := scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, srcDir); err != nil {
 			return err
 		}
 	}
@@ -155,9 +155,9 @@ func scaffoldWithConfig(targetDir, bookTitle, authorName, themeChoice, sourceDir
 			return fmt.Errorf("reading embedded %s: %w", asset, err)
 		}
 		content := replacer.Replace(string(data))
-		outPath := filepath.Join(bookDir, filepath.Base(asset))
-		if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
-			return fmt.Errorf("writing %s: %w", outPath, err)
+		destPath := filepath.Join(bookDir, filepath.Base(asset))
+		if err := os.WriteFile(destPath, []byte(content), 0644); err != nil {
+			return fmt.Errorf("writing %s: %w", destPath, err)
 		}
 	}
 

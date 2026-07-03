@@ -8,10 +8,10 @@ import (
 
 func TestDefault(t *testing.T) {
 	cfg := Default()
-	if cfg.Source != "book" {
+	if cfg.Source != defaultSource {
 		t.Errorf("expected source 'book', got %q", cfg.Source)
 	}
-	if cfg.Output != "out.pdf" {
+	if cfg.Output != defaultOutput {
 		t.Errorf("expected output 'out.pdf', got %q", cfg.Output)
 	}
 	if cfg.Title != "Document" {
@@ -116,10 +116,10 @@ func TestLoadDefaultsOnMissingKeys(t *testing.T) {
 	if cfg.Title != "Just Title" {
 		t.Errorf("expected title 'Just Title', got %q", cfg.Title)
 	}
-	if cfg.Source != "book" {
+	if cfg.Source != defaultSource {
 		t.Errorf("expected default source 'book', got %q", cfg.Source)
 	}
-	if cfg.Output != "out.pdf" {
+	if cfg.Output != defaultOutput {
 		t.Errorf("expected default output 'out.pdf', got %q", cfg.Output)
 	}
 }
@@ -132,8 +132,14 @@ func TestFindConfig(t *testing.T) {
 	}
 
 	oldDir, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(oldDir)
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Chdir(oldDir); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	found, err := FindConfig()
 	if err != nil {

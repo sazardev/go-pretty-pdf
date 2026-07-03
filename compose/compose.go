@@ -56,7 +56,7 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 	bodyBuf.WriteString(`<div style="page-break-before:always; break-before:page;"></div>` + "\n")
 
 	for _, doc := range docs {
-		bodyBuf.WriteString(fmt.Sprintf(`<section id="%s">`+"\n", mdx.AnchorID(doc.ID())))
+		fmt.Fprintf(&bodyBuf, `<section id="%s">`+"\n", mdx.AnchorID(doc.ID()))
 		bodyBuf.WriteString(doc.HTML)
 		bodyBuf.WriteString("</section>\n")
 	}

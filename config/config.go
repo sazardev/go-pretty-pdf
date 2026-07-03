@@ -8,7 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const DefaultConfigFile = "go-pretty-pdf.yml"
+const (
+	DefaultConfigFile = "go-pretty-pdf.yml"
+	defaultSource     = "book"
+	defaultOutput     = "out.pdf"
+)
 
 type Config struct {
 	Title    string            `yaml:"title"`
@@ -42,8 +46,8 @@ type RenderConfig struct {
 
 func Default() *Config {
 	return &Config{
-		Source: "book",
-		Output: "out.pdf",
+		Source: defaultSource,
+		Output: defaultOutput,
 		Title:  "Document",
 		Author: "go-pretty-pdf",
 		Lint: LintConfig{

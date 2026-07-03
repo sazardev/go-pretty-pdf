@@ -39,7 +39,6 @@ func NewDefaultValidator() *DefaultValidator {
 }
 
 var headingRe = regexp.MustCompile(`<h([1-6])[ >]`)
-var linkRe = regexp.MustCompile(`href="#([^"]+)"`)
 
 func (v *DefaultValidator) Validate(doc *Document) []ValidationError {
 	var errs []ValidationError

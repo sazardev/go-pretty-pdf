@@ -109,7 +109,7 @@ func init() {
 	buildCmd.Flags().StringVar(&title, "title", "", "book title")
 	buildCmd.Flags().StringVar(&subtitle, "subtitle", "", "book subtitle")
 	buildCmd.Flags().StringVar(&author, "author", "", "book author")
-	buildCmd.Flags().StringVar(&themeName, "theme", "default", "book theme (default, minimal)")
+	buildCmd.Flags().StringVar(&themeName, "theme", defaultTheme, "book theme (default, minimal)")
 	buildCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path")
 	buildCmd.Flags().StringVar(&tmplPath, "template", "", "custom HTML template file path")
 	buildCmd.Flags().StringVar(&timeoutStr, "timeout", "", "render timeout (e.g. 30s, 1m)")
@@ -120,7 +120,7 @@ func init() {
 	initCmd.Flags().BoolVar(&initBare, "bare", false, "non-interactive init with flags")
 	initCmd.Flags().StringVar(&title, "title", "My Book", "book title (for --bare)")
 	initCmd.Flags().StringVar(&author, "author", "go-pretty-pdf", "book author (for --bare)")
-	initCmd.Flags().StringVar(&themeName, "theme", "default", "book theme (for --bare)")
+	initCmd.Flags().StringVar(&themeName, "theme", defaultTheme, "book theme (for --bare)")
 	initCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
 
 	serveCmd.Flags().IntVar(&servePort, "port", 8080, "HTTP server port")
@@ -131,5 +131,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-

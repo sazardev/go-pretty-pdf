@@ -16,6 +16,11 @@ import (
 	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
+const (
+	defaultTheme      = "default"
+	outputDirWritable = "Output directory writable"
+)
+
 func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	cfg := config.Default()
 
@@ -107,14 +112,14 @@ func buildOpts(cfg *config.Config) []prettypdf.Option {
 		prettypdf.WithConfigCSSAndTemplate(cfg),
 	}
 
-	if cfg.Vars != nil && len(cfg.Vars) > 0 {
+	if len(cfg.Vars) > 0 {
 		opts = append(opts, prettypdf.WithVars(cfg.Vars))
 	}
 
 	validator := validatorFromConfig(cfg)
 	opts = append(opts, prettypdf.WithValidator(validator))
 
-	if cfg.Theme != "" && cfg.Theme != "default" {
+	if cfg.Theme != "" && cfg.Theme != defaultTheme {
 		switch cfg.Theme {
 		case "minimal":
 			opts = append(opts, prettypdf.WithTheme(theme.Minimal))
@@ -170,7 +175,7 @@ func buildOpts(cfg *config.Config) []prettypdf.Option {
 
 func validatorFromConfig(cfg *config.Config) *mdx.DefaultValidator {
 	v := mdx.NewDefaultValidator()
-	if cfg.Lint.RequireFrontmatter != nil && len(cfg.Lint.RequireFrontmatter) > 0 {
+	if len(cfg.Lint.RequireFrontmatter) > 0 {
 		v.RequireFrontmatter = cfg.Lint.RequireFrontmatter
 	}
 	v.NoDuplicateIDs = cfg.Lint.NoDuplicateIDs
@@ -183,7 +188,7 @@ func validatorFromConfig(cfg *config.Config) *mdx.DefaultValidator {
 
 func parserFromConfig(cfg *config.Config) *mdx.Parser {
 	parserOpts := []mdx.ParserOption{}
-	if cfg.Vars != nil && len(cfg.Vars) > 0 {
+	if len(cfg.Vars) > 0 {
 		parserOpts = append(parserOpts, mdx.WithVars(cfg.Vars))
 	}
 	return mdx.NewParser(parserOpts...)
@@ -197,7 +202,7 @@ func parseCSSUnit(s string) float64 {
 
 	var value float64
 	var unit string
-	fmt.Sscanf(s, "%f%s", &value, &unit)
+	_, _ = fmt.Sscanf(s, "%f%s", &value, &unit)
 
 	switch strings.ToLower(unit) {
 	case "in":

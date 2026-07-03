@@ -86,21 +86,6 @@ func (pp *PipelineProgress) Skip(stepName string, reason string) {
 	}
 }
 
-func getStatusIcon(status StepStatus) string {
-	switch status {
-	case StepDone:
-		return SuccessSymbol
-	case StepError:
-		return ErrorSymbol
-	case StepRunning:
-		return StepRunningStyle.Render("◌")
-	case StepSkipped:
-		return WarningSymbol
-	default:
-		return MutedStyle.Render("○")
-	}
-}
-
 type WatchStats struct {
 	Builds  int
 	Errors  int

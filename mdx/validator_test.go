@@ -52,8 +52,8 @@ func TestDefaultValidatorValidate(t *testing.T) {
 	})
 
 	t.Run("max heading depth exceeded", func(t *testing.T) {
-		v := NewDefaultValidator()
-		v.MaxHeadingDepth = 2
+		v2 := NewDefaultValidator()
+		v2.MaxHeadingDepth = 2
 		doc := &Document{
 			Path: "book/test.mdx",
 			Frontmatter: map[string]interface{}{
@@ -62,15 +62,15 @@ func TestDefaultValidatorValidate(t *testing.T) {
 			},
 			HTML: "<h1>One</h1><h2>Two</h2><h3>Three</h3>",
 		}
-		errs := v.Validate(doc)
+		errs := v2.Validate(doc)
 		if len(errs) == 0 {
 			t.Fatal("expected heading depth error")
 		}
 	})
 
 	t.Run("heading depth within limit", func(t *testing.T) {
-		v := NewDefaultValidator()
-		v.MaxHeadingDepth = 3
+		v3 := NewDefaultValidator()
+		v3.MaxHeadingDepth = 3
 		doc := &Document{
 			Path: "book/test.mdx",
 			Frontmatter: map[string]interface{}{
@@ -79,7 +79,7 @@ func TestDefaultValidatorValidate(t *testing.T) {
 			},
 			HTML: "<h1>One</h1><h2>Two</h2><h3>Three</h3>",
 		}
-		errs := v.Validate(doc)
+		errs := v3.Validate(doc)
 		if len(errs) != 0 {
 			t.Fatalf("expected 0 errors, got %d", len(errs))
 		}

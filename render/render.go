@@ -13,14 +13,14 @@ import (
 )
 
 type Options struct {
-	Timeout         time.Duration
-	HeaderTitle     string
-	MarginTop       float64
-	MarginBottom    float64
-	MarginLeft      float64
-	MarginRight     float64
-	PaperWidth      float64
-	PaperHeight     float64
+	Timeout      time.Duration
+	HeaderTitle  string
+	MarginTop    float64
+	MarginBottom float64
+	MarginLeft   float64
+	MarginRight  float64
+	PaperWidth   float64
+	PaperHeight  float64
 }
 
 func DefaultOptions() Options {
@@ -116,5 +116,3 @@ func CheckChromeAvailable() error {
 
 	return chromedp.Run(ctx)
 }
-
-

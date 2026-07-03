@@ -34,8 +34,8 @@ var (
 			Padding(1, 2)
 
 	PanelTitleStyle = lipgloss.NewStyle().
-				Bold(true).
-				Foreground(primaryColor)
+			Bold(true).
+			Foreground(primaryColor)
 
 	StepPendingStyle = lipgloss.NewStyle().Foreground(mutedColor)
 	StepRunningStyle = lipgloss.NewStyle().Foreground(infoColor)
@@ -56,12 +56,12 @@ var (
 	NumberStyle   = lipgloss.NewStyle().Foreground(successColor).Bold(true)
 )
 
-func Success(msg string) string  { return SuccessSymbol + " " + msg }
-func Error(msg string) string    { return ErrorSymbol + " " + ErrorStyle.Render(msg) }
-func Warn(msg string) string     { return WarningSymbol + " " + WarningStyle.Render(msg) }
-func Info(msg string) string     { return InfoSymbol + " " + msg }
-func Bullet(msg string) string   { return BulletSymbol + " " + msg }
-func Heading(msg string) string  { return HeadingStyle.Render(msg) }
+func Success(msg string) string    { return SuccessSymbol + " " + msg }
+func Error(msg string) string      { return ErrorSymbol + " " + ErrorStyle.Render(msg) }
+func Warn(msg string) string       { return WarningSymbol + " " + WarningStyle.Render(msg) }
+func Info(msg string) string       { return InfoSymbol + " " + msg }
+func Bullet(msg string) string     { return BulletSymbol + " " + msg }
+func Heading(msg string) string    { return HeadingStyle.Render(msg) }
 func Subheading(msg string) string { return SubheadingStyle.Render(msg) }
 
 func Panel(title, body string) string {

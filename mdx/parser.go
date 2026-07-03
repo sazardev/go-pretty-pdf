@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/yuin/goldmark"
+	meta "github.com/yuin/goldmark-meta"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkHtml "github.com/yuin/goldmark/renderer/html"
-	meta "github.com/yuin/goldmark-meta"
 )
 
 type ParseFileError struct {

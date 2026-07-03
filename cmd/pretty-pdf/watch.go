@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"os/signal"
+	"path/filepath"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -33,11 +33,11 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	if err := filepath.WalkDir(cfg.Source, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if d.IsDir() {
 			return watcher.Add(path)

@@ -121,7 +121,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 	themeLabel := cfg.Theme
 	if themeLabel == "" {
-		themeLabel = "default"
+		themeLabel = defaultTheme
 	}
 
 	output.PrintBuildSummary(output.BuildStats{
@@ -238,19 +238,19 @@ func runPreFlight(cfg *config.Config) []output.PreFlightResult {
 		if _, err := os.Stat(outDir); os.IsNotExist(err) {
 			if err := os.MkdirAll(outDir, 0755); err != nil {
 				results = append(results, output.PreFlightResult{
-					Name:    "Output directory writable",
+					Name:    outputDirWritable,
 					Passed:  false,
 					Message: fmt.Sprintf("cannot create %s: %v", outDir, err),
 				})
 			} else {
 				results = append(results, output.PreFlightResult{
-					Name:   "Output directory writable",
+					Name:   outputDirWritable,
 					Passed: true,
 				})
 			}
 		} else {
 			results = append(results, output.PreFlightResult{
-				Name:   "Output directory writable",
+				Name:   outputDirWritable,
 				Passed: true,
 			})
 		}
@@ -298,9 +298,9 @@ func runPreFlight(cfg *config.Config) []output.PreFlightResult {
 
 func countMDXFiles(dir string) int {
 	count := 0
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if !d.IsDir() && strings.HasSuffix(strings.ToLower(d.Name()), ".mdx") {
 			count++

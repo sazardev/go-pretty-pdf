@@ -12,7 +12,7 @@ var Default = Theme{
 
 var Minimal = Theme{
 	Name: "minimal",
-	CSS: minimalCSS,
+	CSS:  minimalCSS,
 }
 
 var minimalCSS = `@page {

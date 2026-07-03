@@ -45,8 +45,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		reloadCh: make(chan struct{}),
 	}
 
-	if err := ls.rebuild(pdf); err != nil {
-		return err
+	if rebuildErr := ls.rebuild(pdf); rebuildErr != nil {
+		return rebuildErr
 	}
 
 	http.HandleFunc("/", ls.serveHTML)
@@ -56,11 +56,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	if err := filepath.WalkDir(cfg.Source, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if d.IsDir() {
 			return watcher.Add(path)
@@ -150,7 +150,7 @@ func (ls *liveServer) serveHTML(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(html))
+	_, _ = w.Write([]byte(html))
 }
 
 func (ls *liveServer) serveSSE(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +164,7 @@ func (ls *liveServer) serveSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	fmt.Fprintf(w, "event: connected\ndata:\n\n")
+	_, _ = fmt.Fprintf(w, "event: connected\ndata:\n\n")
 	flusher.Flush()
 
 	ch := ls.reloadCh
@@ -172,7 +172,7 @@ func (ls *liveServer) serveSSE(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	select {
 	case <-ch:
-		fmt.Fprintf(w, "event: reload\ndata:\n\n")
+		_, _ = fmt.Fprintf(w, "event: reload\ndata:\n\n")
 		flusher.Flush()
 	case <-ctx.Done():
 	}
