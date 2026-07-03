@@ -40,7 +40,8 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: github.com/sazardev/go-pretty-pdf
+      local-prefixes:
+        - github.com/sazardev/go-pretty-pdf
   exclusions:
     paths:
       - bin
