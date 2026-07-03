@@ -24,6 +24,7 @@ func buildTOC(docs []*mdx.Document) string {
 		h1Key := parts[0]
 		isH1 := parts[1] == 0 && parts[2] == 0
 		isH2 := parts[2] == 0 && !isH1
+		isH3 := parts[2] != 0
 
 		link := fmt.Sprintf(`<a href="#%s">%s %s</a>`,
 			mdx.AnchorID(d.ID()),
@@ -35,8 +36,10 @@ func buildTOC(docs []*mdx.Document) string {
 			fmt.Fprintf(&buf, `<div class="toc-h1">%s</div>`+"\n", link)
 		} else if isH2 {
 			fmt.Fprintf(&buf, `<div class="toc-h2">%s</div>`+"\n", link)
-		} else {
+		} else if isH3 {
 			fmt.Fprintf(&buf, `<div class="toc-h3">%s</div>`+"\n", link)
+		} else {
+			fmt.Fprintf(&buf, `<div class="toc-h1">%s</div>`+"\n", link)
 		}
 	}
 

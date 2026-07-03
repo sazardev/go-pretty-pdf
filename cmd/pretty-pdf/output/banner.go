@@ -18,7 +18,7 @@ func PrintBanner(version string) {
 
 	fmt.Println(PrimaryStyle.Render(banner))
 	if version != "" && version != "dev" {
-		fmt.Println("  " + MutedStyle.Render("v"+version))
+		fmt.Println("  " + MutedStyle.Render(version))
 	}
 	fmt.Println()
 }

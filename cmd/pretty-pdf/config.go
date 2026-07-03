@@ -181,7 +181,7 @@ func validatorFromConfig(cfg *config.Config) *mdx.DefaultValidator {
 	v.NoDuplicateIDs = cfg.Lint.NoDuplicateIDs
 	v.MaxHeadingDepth = cfg.Lint.MaxHeadingDepth
 	if v.MaxHeadingDepth == 0 {
-		v.MaxHeadingDepth = 3
+		v.MaxHeadingDepth = 5
 	}
 	return v
 }

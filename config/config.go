@@ -53,7 +53,7 @@ func Default() *Config {
 		Lint: LintConfig{
 			RequireFrontmatter: []string{"id", "title"},
 			NoDuplicateIDs:     true,
-			MaxHeadingDepth:    3,
+			MaxHeadingDepth:    5,
 		},
 	}
 }

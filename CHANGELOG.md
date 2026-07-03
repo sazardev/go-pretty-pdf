@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TestAnchorID` test covering bracket-stripping behavior
 - `.component-warning-title` CSS class for `<Warning>` title styling
 - Template placeholders (`{{BOOK_TITLE}}`, `{{AUTHOR_NAME}}`, `{{SOURCE_DIR}}`, `{{THEME}}`) in init scaffold files
+- Support for h4 and h5 heading levels in MDX documents, with matching TOC styling and CSS
 
 ### Changed
 

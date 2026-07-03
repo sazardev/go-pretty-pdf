@@ -30,6 +30,8 @@ body {
 h1 { font-size: 16pt; page-break-before: always; }
 h2 { font-size: 13pt; }
 h3 { font-size: 11pt; }
+h4 { font-size: 10.5pt; }
+h5 { font-size: 10pt; }
 
 pre {
   background: #fafafa;
@@ -65,6 +67,8 @@ th { background: #f0f0f0; }
 .toc h1 { font-size: 18pt; }
 .toc-h2 { padding-left: 16pt; }
 .toc-h3 { padding-left: 32pt; }
+.toc-h4 { padding-left: 48pt; }
+.toc-h5 { padding-left: 64pt; }
 
 .component-deep-dive {
   background: #f5f8ff;
