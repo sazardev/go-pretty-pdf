@@ -43,6 +43,7 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 			chromedp.DisableGPU,
 			chromedp.NoSandbox,
 			chromedp.Headless,
+			chromedp.Flag("disable-dev-shm-usage", true),
 		)...,
 	)
 	defer allocCancel()
@@ -105,6 +106,7 @@ func CheckChromeAvailable() error {
 		context.Background(),
 		chromedp.NoSandbox,
 		chromedp.Headless,
+		chromedp.Flag("disable-dev-shm-usage", true),
 	)
 	defer allocCancel()
 
