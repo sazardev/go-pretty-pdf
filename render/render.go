@@ -2,8 +2,8 @@ package render
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -54,8 +54,8 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 	ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
 
-	encoded := url.QueryEscape(htmlContent)
-	dataURI := "data:text/html;charset=utf-8," + encoded
+	encoded := base64.StdEncoding.EncodeToString([]byte(htmlContent))
+	dataURI := "data:text/html;charset=utf-8;base64," + encoded
 
 	headerTpl := fmt.Sprintf(
 		`<div style="font-size:8pt;font-family:system-ui,sans-serif;color:#666;padding-left:0.6in;padding-right:0.6in;">%s</div>`,
