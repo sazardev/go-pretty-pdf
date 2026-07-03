@@ -4,9 +4,12 @@ on:
   push:
     branches: [main, master]
     paths:
+      - "README.md"
+      - "docs/**"
+      - "CHANGELOG.md"
       - "examples/**"
       - "compose/assets/**"
-      - "README.md"
+      - "scripts/docsgen/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -20,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-demo:
+  build-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +37,9 @@ jobs:
           sudo wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i /tmp/chrome.deb || sudo apt-get install -f -y
 
+      - name: Generate documentation site
+        run: go run ./scripts/docsgen
+
       - name: Build demo PDF (library example)
         run: go run ./examples
 
@@ -42,67 +48,17 @@ jobs:
           go build -o pretty-pdf ./cmd/pretty-pdf
           ./pretty-pdf build --config examples/full-demo/go-pretty-pdf.yml --source examples/full-demo --out examples/full-demo/demo.pdf
 
-      - name: Prepare pages site
+      - name: Stage pages artifact
         run: |
-          mkdir -p _site
           cp examples/output/example-output.pdf _site/library-demo.pdf
           cp examples/full-demo/demo.pdf _site/full-demo.pdf
-
-          cat > _site/index.html << 'HTML'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>go-pretty-pdf — Demo</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: system-ui, -apple-system, sans-serif; background: #0d1117; color: #c9d1d9; max-width: 800px; margin: 0 auto; padding: 2rem; }
-            h1 { color: #58a6ff; font-size: 2rem; margin-bottom: 0.5rem; }
-            h2 { color: #f0f6fc; margin: 2rem 0 1rem; }
-            p { line-height: 1.6; color: #8b949e; }
-            a { color: #58a6ff; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-            .demo-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
-            .demo-card h3 { color: #f0f6fc; margin-bottom: 0.5rem; }
-            .demo-card p { margin-bottom: 1rem; }
-            .demo-link { display: inline-block; padding: 0.5rem 1rem; background: #238636; color: white; border-radius: 6px; font-weight: 600; }
-            .demo-link:hover { background: #2ea043; text-decoration: none; }
-            .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
-            .badge-go { background: #00ADD8; color: white; }
-          </style>
-          </head>
-          <body>
-          <h1>go-pretty-pdf <span class="badge badge-go">Go</span></h1>
-          <p>Transform MDX files into beautiful, print-ready PDFs via headless Chrome.</p>
-
-          <h2>Demo PDFs</h2>
-
-          <div class="demo-card">
-            <h3>Library Demo</h3>
-            <p>Generated using the Go library API with custom components (Callout, Steps, Card).</p>
-            <a class="demo-link" href="library-demo.pdf">View PDF</a>
-          </div>
-
-          <div class="demo-card">
-            <h3>Full Demo</h3>
-            <p>Generated via CLI with custom CSS, template, YAML config, and all built-in features.</p>
-            <a class="demo-link" href="full-demo.pdf">View PDF</a>
-          </div>
-
-          <h2>Links</h2>
-          <p><a href="https://github.com/sazardev/go-pretty-pdf">GitHub Repository</a></p>
-          <p><a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">Go Package Reference</a></p>
-          </body>
-          </html>
-          HTML
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
   deploy:
-    needs: build-demo
+    needs: build-docs
     runs-on: ubuntu-latest
     environment:
       name: github-pages
