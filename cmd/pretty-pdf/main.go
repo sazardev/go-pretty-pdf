@@ -73,8 +73,16 @@ var rootCmd = &cobra.Command{
 var buildCmd = &cobra.Command{
 	Use:   "build",
 	Short: "Build a PDF from MDX source files",
-	Long:  "Parse MDX files, validate them, compose HTML, and render to PDF via headless Chrome.",
-	RunE:  runBuild,
+	Long: `Parse MDX files, validate them, compose HTML, and render to PDF via headless Chrome.
+
+Pick a theme with --theme (see 'pretty-pdf theme list'), then customize it
+without writing CSS via --color-*/--font-*/--density, or drop sections with
+--no-cover/--no-toc/--no-page-numbers/--no-header.`,
+	Example: `  pretty-pdf build --theme corporate --color-primary "#0ea5e9"
+  pretty-pdf build --theme dark --no-cover --no-page-numbers
+  pretty-pdf build --theme my-custom-theme --density compact
+  pretty-pdf build --css custom.css --template custom.html`,
+	RunE: runBuild,
 }
 
 var checkCmd = &cobra.Command{

@@ -21,34 +21,62 @@ var (
 var themeCmd = &cobra.Command{
 	Use:   "theme",
 	Short: "List, inspect, and manage PDF themes",
-	Long:  "Manage go-pretty-pdf's built-in and custom themes: list what's available, inspect resolved CSS, scaffold new custom themes, and import existing ones.",
+	Long: `Manage go-pretty-pdf's built-in and custom themes: list what's available,
+inspect resolved CSS, scaffold new custom themes, and import existing ones.
+
+Themes are also customizable without writing CSS via 'pretty-pdf build' flags
+(--color-*, --font-*, --density, --no-cover/--no-toc/--no-page-numbers/--no-header)
+or the 'theme_options' block in go-pretty-pdf.yml.`,
+	Example: `  pretty-pdf theme list
+  pretty-pdf theme show corporate
+  pretty-pdf theme new my-report --from corporate
+  pretty-pdf theme add ./some-theme.theme.yml`,
 }
 
 var themeListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List built-in and custom themes",
-	RunE:  runThemeList,
+	Long: `Print every built-in theme with its description, followed by any custom
+themes discovered in ./themes (project-local) and the global themes
+directory (~/.config/pretty-pdf/themes on Linux).`,
+	RunE: runThemeList,
 }
 
 var themeShowCmd = &cobra.Command{
 	Use:   "show <name>",
 	Short: "Print the final resolved CSS for a theme",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runThemeShow,
+	Long: `Resolve a theme by name — built-in, a custom theme discovered on disk, or a
+direct path to a .theme.yml/.css file — with no customization applied, and
+print its fully-assembled CSS to stdout.`,
+	Example: `  pretty-pdf theme show dark
+  pretty-pdf theme show my-report > my-report.css`,
+	Args: cobra.ExactArgs(1),
+	RunE: runThemeShow,
 }
 
 var themeNewCmd = &cobra.Command{
 	Use:   "new <name>",
 	Short: "Scaffold a new custom theme",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runThemeNew,
+	Long: `Write a starter <name>.theme.yml you can hand-edit: colors, fonts, section
+toggles, density, and a raw CSS escape hatch. Refuses to overwrite an
+existing file.`,
+	Example: `  pretty-pdf theme new my-report --from corporate
+  pretty-pdf theme new my-report --from classic --global`,
+	Args: cobra.ExactArgs(1),
+	RunE: runThemeNew,
 }
 
 var themeAddCmd = &cobra.Command{
 	Use:   "add <path>",
 	Short: "Import an existing theme file (.theme.yml or .css) as a custom theme",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runThemeAdd,
+	Long: `Copy an existing .theme.yml file into the managed themes directory as-is, or
+wrap a loose .css file into a minimal .theme.yml (extends: default, with the
+file's content as its css: block).`,
+	Example: `  pretty-pdf theme add ./some-theme.theme.yml
+  pretty-pdf theme add ./brand.css --as my-report
+  pretty-pdf theme add ./some-theme.theme.yml --global`,
+	Args: cobra.ExactArgs(1),
+	RunE: runThemeAdd,
 }
 
 func init() {

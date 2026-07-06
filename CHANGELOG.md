@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `build` and `theme` CLI commands now carry expanded help text with full `Long` descriptions, `Example` blocks, and dynamic theme name listing
+- `README.md` theme section updated: lists all 8 builtin themes, documents `WithThemeName(name, opts)`, adds CLI usage examples for theme customization
 - `theme.Theme` struct: now includes `Description`, `Category`, `Sections` (resolved defaults), and `CSS` comes from dedicated asset files instead of raw Go strings
 - `WithTheme(t)` — now applies CSS only (no template); section toggles must be set separately
 - `WithConfigCSSAndTemplate` — resolves `cfg.Theme` via `ResolveByName` with full `ThemeOptionsConfig` customization before applying explicit CSS/template file overrides

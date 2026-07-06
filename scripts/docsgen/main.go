@@ -105,7 +105,7 @@ func heroSection() Section {
 </div>
 <p class="hero-requirements">
   Requires Chrome or Chromium for PDF rendering.
-  <a href="#getting-started">Get started</a> &middot;
+  <a href="#quick-start">Get started</a> &middot;
   <a href="https://github.com/sazardev/go-pretty-pdf">GitHub</a> &middot;
   <a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">pkg.go.dev</a>
 </p>`,
@@ -174,6 +174,7 @@ func cliSections(src []byte, md goldmark.Markdown) []Section {
 			cmdMap := map[string]string{
 				"build":      "build",
 				"check":      "check",
+				"theme":      "theme",
 				"init":       "init",
 				"serve":      "serve",
 				"watch":      "watch",

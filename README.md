@@ -206,7 +206,8 @@ errs, _ := pdf.Validate(ctx)
 | `WithAuthor(author)` | Document author |
 | `WithCSS(css)` | Custom CSS content string |
 | `WithTemplate(html)` | Custom HTML template string |
-| `WithTheme(t)` | Pre-built theme (`theme.Default`, `theme.Minimal`) |
+| `WithTheme(t)` | Apply a raw `theme.Theme` (no customization/section toggles) |
+| `WithThemeName(name, opts)` | Resolve a theme by name (builtin, custom, or file path) with color/font/section customization |
 | `WithComponent(name, handler)` | Register custom MDX component |
 | `WithValidator(v)` | Custom validation logic |
 | `WithTimeout(d)` | Chrome render timeout (default: 60s) |
@@ -222,24 +223,48 @@ errs, _ := pdf.Validate(ctx)
 
 ## Themes
 
-Two themes are built in:
+Eight built-in themes, each a palette/typography layer over one shared
+structural stylesheet — clean and professional by default, easy to
+customize without writing CSS, and extendable with your own custom themes:
 
-- **Default** — embedded `print.css` + `template.html` (professional, feature-rich)
-- **Minimal** — stripped-down CSS, system font stack
+`default` &middot; `minimal` &middot; `modern` &middot; `classic` &middot; `corporate` &middot; `dark` &middot; `academic` &middot; `editorial`
+
+```bash
+# Pick a theme, tweak colors/fonts/density, drop sections you don't want
+pretty-pdf build --theme corporate \
+  --color-primary "#0ea5e9" --font-heading "Georgia, serif" \
+  --no-cover --no-page-numbers --density compact
+
+# Scaffold your own reusable theme
+pretty-pdf theme new my-report --from corporate
+pretty-pdf theme list
+```
 
 ```go
-prettypdf.WithTheme(theme.Minimal)
+prettypdf.WithThemeName("corporate", theme.Options{
+	Colors:   theme.Colors{Primary: "#0ea5e9"},
+	Sections: theme.Sections{Cover: theme.BoolPtr(false)},
+})
 ```
+
+Custom themes live in `<name>.theme.yml` files (project-local `./themes/`
+or a global themes directory) and `extends` a builtin theme. Full reference,
+all customization fields, and the `pretty-pdf theme` command family:
+see [docs/cli.md#themes](docs/cli.md#themes).
 
 ## CLI reference
 
 ```
 pretty-pdf build     Build a PDF from MDX source files
 pretty-pdf check     Validate MDX files without building
+pretty-pdf theme     List, inspect, and manage themes
 pretty-pdf init      Scaffold a new book project (interactive wizard)
 pretty-pdf watch     Watch for changes and rebuild automatically
+pretty-pdf serve     Preview MDX as HTML with live reload (no Chrome required)
 pretty-pdf version   Print the version number
 ```
+
+Run `pretty-pdf <command> --help` for the full flag list of any command.
 
 Global flags: `--config`, `--source`, `--verbose`, `--no-color`, `--quiet`
 
