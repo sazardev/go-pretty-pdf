@@ -5,11 +5,15 @@ import (
 	"html"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 type ComponentHandler func(attrs map[string]string, innerHTML string) string
 
+// ComponentRegistry is safe for concurrent use: Register and Transpile may
+// be called from multiple goroutines sharing the same Parser.
 type ComponentRegistry struct {
+	mu       sync.RWMutex
 	handlers map[string]ComponentHandler
 }
 
@@ -24,12 +28,21 @@ func NewComponentRegistry() *ComponentRegistry {
 }
 
 func (r *ComponentRegistry) Register(name string, handler ComponentHandler) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.handlers[name] = handler
 }
 
 func (r *ComponentRegistry) Transpile(input string) string {
-	result := input
+	r.mu.RLock()
+	handlers := make(map[string]ComponentHandler, len(r.handlers))
 	for name, handler := range r.handlers {
+		handlers[name] = handler
+	}
+	r.mu.RUnlock()
+
+	result := input
+	for name, handler := range handlers {
 		re := buildComponentRegex(name)
 		result = re.ReplaceAllStringFunc(result, func(match string) string {
 			matches := re.FindStringSubmatch(match)

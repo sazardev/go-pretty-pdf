@@ -8,19 +8,21 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
 type Options struct {
-	Timeout      time.Duration
-	HeaderTitle  string
-	MarginTop    float64
-	MarginBottom float64
-	MarginLeft   float64
-	MarginRight  float64
-	PaperWidth   float64
-	PaperHeight  float64
+	Timeout       time.Duration
+	HeaderTitle   string
+	MarginTop     float64
+	MarginBottom  float64
+	MarginLeft    float64
+	MarginRight   float64
+	PaperWidth    float64
+	PaperHeight   float64
+	NetworkAccess bool
 }
 
 func DefaultOptions() Options {
@@ -33,6 +35,10 @@ func DefaultOptions() Options {
 		MarginRight:  0.6,
 		PaperWidth:   8.27,
 		PaperHeight:  11.69,
+		// NetworkAccess defaults to false: the rendered HTML is a
+		// self-contained data URI, so outbound network requests are
+		// blocked unless explicitly enabled.
+		NetworkAccess: false,
 	}
 }
 
@@ -66,7 +72,16 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 
 	var pdfBuf []byte
 
-	if err := chromedp.Run(ctx,
+	tasks := chromedp.Tasks{}
+	if !opts.NetworkAccess {
+		tasks = append(tasks,
+			network.Enable(),
+			network.SetBlockedURLs().WithURLPatterns([]*network.BlockPattern{
+				{URLPattern: "*://*/*", Block: true},
+			}),
+		)
+	}
+	tasks = append(tasks,
 		chromedp.Navigate(dataURI),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
@@ -86,7 +101,9 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 				Do(ctx)
 			return err
 		}),
-	); err != nil {
+	)
+
+	if err := chromedp.Run(ctx, tasks...); err != nil {
 		return fmt.Errorf("chromedp render: %w", err)
 	}
 

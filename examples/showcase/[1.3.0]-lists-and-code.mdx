@@ -1,0 +1,61 @@
+---
+id: "[1.3.0]"
+title: Lists & Code
+subtitle: Structure and syntax
+tags: [lists, code]
+difficulty: Intermediate
+status: Published
+completeness: 100
+depends_on: ["[1.2.0]"]
+---
+
+# Lists & Code
+
+## Unordered
+
+- Parse MDX with frontmatter
+- Transpile custom components
+- Compose HTML with a template + CSS
+- Render to PDF via headless Chrome
+
+## Ordered
+
+1. Write your `.mdx` files
+2. Organize them with `[X.Y.Z]` IDs
+3. Run `pretty-pdf build`
+4. Get your PDF
+
+## Nested
+
+- Core pipeline
+  - Parser (goldmark)
+  - Composer (html/template)
+  - Renderer (chromedp)
+- CLI
+  - `build`, `check`, `init`, `watch`
+
+## Task list
+
+- [x] Ship the default theme
+- [x] Support h4/h5 headings
+- [x] Block network access by default
+- [ ] Add more built-in themes
+
+## Code
+
+```go
+pdf, err := prettypdf.New(
+    prettypdf.WithSourceDir("./docs"),
+    prettypdf.WithOutputFile("out.pdf"),
+)
+```
+
+```bash
+pretty-pdf build --source ./docs --out out.pdf
+```
+
+```yaml
+title: "My Book"
+render:
+  paper: a4
+```

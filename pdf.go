@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sazardev/go-pretty-pdf/compose"
@@ -14,13 +15,15 @@ import (
 )
 
 type PDF struct {
-	sourceDir   string
-	outputFile  string
-	parser      *mdx.Parser
-	composeOpts compose.Options
-	renderOpts  render.Options
-	validator   mdx.Validator
-	verbose     bool
+	sourceDir       string
+	outputFile      string
+	parser          *mdx.Parser
+	composeOpts     compose.Options
+	renderOpts      render.Options
+	validator       mdx.Validator
+	verbose         bool
+	pendingWarnings []string
+	headerTitleSet  bool
 }
 
 type ComposeOptions = compose.Options
@@ -77,6 +80,10 @@ func WithTemplate(html string) Option {
 	}
 }
 
+// WithTheme applies a pre-built theme's CSS and template. It shares
+// composeOpts.CSS/Template with WithCSS, WithTemplate, and the theme branch
+// of WithConfigCSSAndTemplate — whichever of these options is applied last
+// wins, since New() applies options in the order they're passed.
 func WithTheme(t theme.Theme) Option {
 	return func(p *PDF) {
 		if t.CSS != "" {
@@ -106,9 +113,12 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
+// WithHeaderTitle sets the PDF page header text. If never called, New()
+// defaults it to the document title (WithTitle/composeOpts.Title).
 func WithHeaderTitle(title string) Option {
 	return func(p *PDF) {
 		p.renderOpts.HeaderTitle = title
+		p.headerTitleSet = true
 	}
 }
 
@@ -140,6 +150,18 @@ func WithPaperSize(width, height float64) Option {
 	}
 }
 
+// WithNetworkAccess controls whether headless Chrome may make outbound
+// network requests while rendering. It defaults to false: the composed
+// HTML is a self-contained data URI, so network access is blocked to
+// prevent SSRF/exfiltration from untrusted MDX content (e.g. a malicious
+// <img> or <script> tag). Enable it only if your documents intentionally
+// reference remote images, fonts, or other resources by URL.
+func WithNetworkAccess(enabled bool) Option {
+	return func(p *PDF) {
+		p.renderOpts.NetworkAccess = enabled
+	}
+}
+
 func WithConfig(cfg *config.Config) Option {
 	return func(p *PDF) {
 		if cfg.Source != "" {
@@ -160,22 +182,26 @@ func WithConfig(cfg *config.Config) Option {
 	}
 }
 
+// WithConfigCSSAndTemplate loads CSS and template content from the file
+// paths in cfg. Read failures are recorded as warnings and flushed to
+// stderr by New() once all options have been applied, so ordering
+// relative to WithVerbose does not matter.
 func WithConfigCSSAndTemplate(cfg *config.Config) Option {
 	return func(p *PDF) {
 		if cfg.CSS != "" {
 			data, err := os.ReadFile(cfg.CSS)
 			if err == nil {
 				p.composeOpts.CSS = string(data)
-			} else if p.verbose {
-				fmt.Fprintf(os.Stderr, "Warning: reading CSS file %s: %v\n", cfg.CSS, err)
+			} else {
+				p.pendingWarnings = append(p.pendingWarnings, fmt.Sprintf("reading CSS file %s: %v", cfg.CSS, err))
 			}
 		}
 		if cfg.Template != "" {
 			data, err := os.ReadFile(cfg.Template)
 			if err == nil {
 				p.composeOpts.Template = string(data)
-			} else if p.verbose {
-				fmt.Fprintf(os.Stderr, "Warning: reading template file %s: %v\n", cfg.Template, err)
+			} else {
+				p.pendingWarnings = append(p.pendingWarnings, fmt.Sprintf("reading template file %s: %v", cfg.Template, err))
 			}
 		}
 		if cfg.Theme != "" {
@@ -184,6 +210,67 @@ func WithConfigCSSAndTemplate(cfg *config.Config) Option {
 				p.composeOpts.CSS = theme.Minimal.CSS
 			case "default":
 			}
+		}
+	}
+}
+
+// WithFullConfig applies every field of cfg: source/output/title/subtitle
+// /author (via WithConfig), CSS/template/theme (via WithConfigCSSAndTemplate),
+// variable substitution (cfg.Vars), and render settings (cfg.Render:
+// timeout, paper size, margins, header title). Unlike WithConfig and
+// WithConfigCSSAndTemplate, which only cover a subset of Config, this is
+// the single option needed to fully apply a loaded go-pretty-pdf.yml.
+func WithFullConfig(cfg *config.Config) Option {
+	return func(p *PDF) {
+		WithConfig(cfg)(p)
+		WithConfigCSSAndTemplate(cfg)(p)
+
+		if len(cfg.Vars) > 0 {
+			p.parser.SetVars(cfg.Vars)
+		}
+
+		if cfg.Render.Timeout != "" {
+			if d, err := time.ParseDuration(cfg.Render.Timeout); err == nil {
+				p.renderOpts.Timeout = d
+			}
+		}
+
+		if w, h, ok := config.ParsePaperSize(cfg.Render.Paper); ok {
+			p.renderOpts.PaperWidth = w
+			p.renderOpts.PaperHeight = h
+		}
+
+		defOpts := render.DefaultOptions()
+		mt := config.ParseCSSUnit(cfg.Render.MarginTop)
+		mb := config.ParseCSSUnit(cfg.Render.MarginBot)
+		ml := config.ParseCSSUnit(cfg.Render.MarginLeft)
+		mr := config.ParseCSSUnit(cfg.Render.MarginRight)
+		if mt != 0 || mb != 0 || ml != 0 || mr != 0 {
+			if mt == 0 {
+				mt = defOpts.MarginTop
+			}
+			if mb == 0 {
+				mb = defOpts.MarginBottom
+			}
+			if ml == 0 {
+				ml = defOpts.MarginLeft
+			}
+			if mr == 0 {
+				mr = defOpts.MarginRight
+			}
+			p.renderOpts.MarginTop = mt
+			p.renderOpts.MarginBottom = mb
+			p.renderOpts.MarginLeft = ml
+			p.renderOpts.MarginRight = mr
+		}
+
+		if cfg.Render.HeaderTitle != "" {
+			headerTitle := cfg.Render.HeaderTitle
+			for k, v := range cfg.Vars {
+				headerTitle = strings.ReplaceAll(headerTitle, "{{"+k+"}}", v)
+			}
+			p.renderOpts.HeaderTitle = headerTitle
+			p.headerTitleSet = true
 		}
 	}
 }
@@ -201,7 +288,16 @@ func New(opts ...Option) (*PDF, error) {
 		o(p)
 	}
 
-	p.renderOpts.HeaderTitle = p.composeOpts.Title
+	if !p.headerTitleSet {
+		p.renderOpts.HeaderTitle = p.composeOpts.Title
+	}
+
+	if p.verbose {
+		for _, w := range p.pendingWarnings {
+			fmt.Fprintf(os.Stderr, "Warning: %s\n", w)
+		}
+	}
+	p.pendingWarnings = nil
 
 	return p, nil
 }

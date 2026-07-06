@@ -88,6 +88,17 @@ MDX files → Parse frontmatter & markdown → Transpile components → Compose 
 
 Documents are sorted by their `[X.Y.Z]` frontmatter ID, not filename.
 
+## Trust model
+
+MDX is parsed with raw HTML passthrough enabled, and custom components
+don't escape their inner content — this lets authors embed arbitrary
+HTML/CSS for rich documents, but it also means a `.mdx` file can contain
+a `<script>` tag that will execute during rendering. By default, headless
+Chrome's network access is blocked while rendering (see `WithNetworkAccess`),
+so scripts can't exfiltrate data or fetch remote content — but they still
+run. **Only build PDFs from MDX you trust.** See [SECURITY.md](SECURITY.md)
+for details.
+
 ## MDX format
 
 ```mdx
@@ -204,8 +215,10 @@ errs, _ := pdf.Validate(ctx)
 | `WithVars(map)` | Variable substitution map |
 | `WithRenderMargins(t,b,l,r)` | PDF margins in inches |
 | `WithPaperSize(w,h)` | Paper size in inches |
-| `WithConfig(cfg)` | Apply config struct |
+| `WithConfig(cfg)` | Apply source/output/title/subtitle/author from config |
 | `WithConfigCSSAndTemplate(cfg)` | Load CSS/template from config file paths |
+| `WithFullConfig(cfg)` | Apply the entire config struct (source, CSS/template, theme, vars, render settings) in one call |
+| `WithNetworkAccess(bool)` | Allow headless Chrome to make network requests while rendering (default: `false`, blocked) |
 
 ## Themes
 

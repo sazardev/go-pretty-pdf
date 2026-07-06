@@ -1,0 +1,60 @@
+---
+id: "[2.1.0]"
+title: Custom Components
+subtitle: Eight components registered with WithComponent
+tags: [components, custom]
+difficulty: Advanced
+status: Published
+completeness: 100
+depends_on: ["[2.0.0]"]
+---
+
+# Custom Components
+
+Every component below is plain Go: a function that takes attributes and
+inner content and returns HTML. None of this is built into the library —
+it's registered once via `WithComponent` before `Build()` runs.
+
+<DeepDive title="One attribute, many uses">
+The transpiler currently captures a single `title` attribute per
+component. Every component here reuses it for whatever single parameter
+it needs: a level, a label, a date, or a percentage.
+</DeepDive>
+
+## Callout
+
+<Callout title="info">This is an informational callout.</Callout>
+<Callout title="success">This is a success callout.</Callout>
+<Callout title="warning">This is a warning callout.</Callout>
+<Callout title="danger">This is a danger callout.</Callout>
+
+## Card
+
+<Card title="Getting Started">
+Install the CLI, scaffold a project with pretty-pdf init, and build your
+first PDF in under a minute.
+</Card>
+
+## Steps
+
+<Steps>
+Write your MDX files
+Add a go-pretty-pdf.yml
+Run pretty-pdf build
+Open the generated PDF
+</Steps>
+
+## Timeline
+
+<Timeline title="v0.1.0 — Initial release">Core pipeline, CLI, and default theme.</Timeline>
+<Timeline title="v0.2.0 — h4/h5 support">Deeper heading levels for longer documents.</Timeline>
+<Timeline title="v0.2.1 — Security hardening">Network access blocked by default during render.</Timeline>
+
+## Progress
+
+<Progress title="82">Test coverage</Progress>
+<Progress title="100">Lint issues resolved</Progress>
+
+## Quote
+
+<Quote title="go-pretty-pdf contributor">Simple things should be simple, and complex things should be possible.</Quote>

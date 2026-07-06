@@ -91,7 +91,7 @@ render:
 	if cfg.Render.Timeout != "30s" {
 		t.Errorf("expected timeout '30s', got %q", cfg.Render.Timeout)
 	}
-	if cfg.Render.Paper != "letter" {
+	if cfg.Render.Paper != PaperLetter {
 		t.Errorf("expected paper 'letter', got %q", cfg.Render.Paper)
 	}
 	if cfg.Render.MarginTop != "10mm" {

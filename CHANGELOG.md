@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-06
+
+### Added
+
+- `WithFullConfig(cfg)` option: applies the entire `config.Config` struct (source, output, title, subtitle, author, CSS/template, theme, vars, render settings) in a single call
+- `WithNetworkAccess(bool)` option: control whether headless Chrome can make outbound network requests during rendering (default: `false`)
+- `config.ParsePaperSize(name)` and `config.ParseCSSUnit(s)` exported functions (moved from `cmd/pretty-pdf/config.go`)
+- `config.PaperLetter` constant for YAML config comparisons
+- `render.Options.NetworkAccess` field, with default network blocking via `chromedp/cdproto/network`
+- Concurrent-safe `ComponentRegistry` (`sync.RWMutex` protecting the handler map)
+- `headerTitleSet` tracking in `PDF`: prevents `New()` from overwriting an explicit header title with the document title
+- Deferred warning buffer in `PDF`: `WithConfigCSSAndTemplate` file-read failures are collected and flushed by `New()` after all options run, making warning output order-independent from `WithVerbose`
+- Comprehensive test suite: `pdf_test.go` (16 tests), `compose/compose_test.go` (6 tests), `compose/toc_test.go` (3 tests), `config/units_test.go` (2 tests), `config/units_test.go` (2 tests), `mdx/component_test.go` (1 race test), `mdx/parser_test.go` (7 tests), `render/render_test.go` (4 tests)
+- Showcase book: 8-document MDX example under `examples/showcase/` with 8 custom components (`Callout`, `Badge`, `Steps`, `Card`, `Stat`, `Timeline`, `Quote`, `Progress`)
+- Showcase integration test: `examples/showcase_test.go` verifies compose output and full PDF rendering
+- Trust model documentation in `README.md`, `SECURITY.md`, and package-level `doc.go`
+
+### Changed
+
+- `cmd/pretty-pdf/buildOpts` simplified to `WithFullConfig` + `WithValidator` (removed duplicated config-to-option mapping)
+- `WithConfigCSSAndTemplate` file-read warnings now deferred to `New()` instead of printed inline (order-independent from `WithVerbose`)
+
+### Security
+
+- **Network access blocked by default** during headless Chrome rendering: prevents SSRF/exfiltration from untrusted MDX content via `<script>`, `<img>`, `<link>`, etc.
+- Detailed trust model documented across `README.md`, `SECURITY.md`, and `doc.go`
+
 ## [0.2.0] - 2026-07-02
 
 ### Added

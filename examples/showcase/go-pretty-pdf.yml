@@ -1,0 +1,10 @@
+title: "go-pretty-pdf Showcase"
+subtitle: "A minimal, elegant example"
+author: "go-pretty-pdf"
+source: .
+output: showcase.pdf
+theme: default
+
+render:
+  timeout: 30s
+  paper: a4

@@ -1,0 +1,27 @@
+---
+id: "[2.2.0]"
+title: Variables & Configuration
+subtitle: "{{product}} v{{version}}, substituted at parse time"
+tags: [variables, config]
+difficulty: Intermediate
+status: Published
+completeness: 100
+depends_on: ["[1.0.0]"]
+---
+
+# Variables & Configuration
+
+Welcome to **{{product}} v{{version}}**. Anywhere text appears in this
+document — frontmatter, headings, body text, even code blocks —
+`{{key}}` is replaced before the Markdown is parsed.
+
+<DeepDive title="How substitution works">
+{{key}} tokens are replaced with plain string substitution before
+goldmark ever sees the document, so it works everywhere text appears,
+including inside custom component bodies.
+</DeepDive>
+
+A go-pretty-pdf.yml file can also drive an entire build without writing
+any Go: title, author, theme, custom CSS and template paths, lint rules,
+and render settings (paper size, margins, timeout, header text) are all
+configurable from YAML.

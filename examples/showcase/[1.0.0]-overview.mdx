@@ -1,0 +1,34 @@
+---
+id: "[1.0.0]"
+title: Overview
+subtitle: A complete tour of what go-pretty-pdf can do
+tags: [overview, showcase]
+difficulty: Beginner
+status: Published
+completeness: 100
+depends_on: []
+---
+
+# go-pretty-pdf Showcase
+
+This is one MDX project, built with a single command, exercising as much
+of go-pretty-pdf's surface as reasonably fits in one book: every
+built-in component, eight custom components, GFM tables and task lists,
+syntax-highlighted code, variable substitution, and the automatic table
+of contents you're about to see.
+
+<Badge title="stable">stable</Badge>
+<Badge title="beta">beta</Badge>
+<Badge title="deprecated">deprecated</Badge>
+
+<Axiom>
+Simple things should be simple. This whole book is eight short sections.
+</Axiom>
+
+<Warning title="Requirement">
+Rendering this book to PDF requires Chrome or Chromium installed locally.
+The eight custom components only render when built through Go — see
+`examples/showcase_test.go` — since they're registered in code via
+`WithComponent`, not in YAML. A bare `pretty-pdf build` still works, it
+just won't style those specific tags.
+</Warning>

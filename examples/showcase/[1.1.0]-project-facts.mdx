@@ -1,0 +1,33 @@
+---
+id: "[1.1.0]"
+title: Project Facts
+subtitle: Real numbers, rendered clearly
+tags: [data, facts]
+difficulty: Beginner
+status: Published
+completeness: 100
+depends_on: ["[1.0.0]"]
+---
+
+# Project Facts
+
+<Stat title="Test Coverage">82%</Stat>
+<Stat title="Lint Issues">0</Stat>
+<Stat title="Components">11</Stat>
+
+<DeepDive title="Why a table?">
+Tables are the clearest way to present structured data in a printed
+document. go-pretty-pdf renders GitHub-flavored Markdown tables natively.
+</DeepDive>
+
+| Spec                | Value              |
+|---------------------|--------------------|
+| Language             | Go 1.26+           |
+| Renderer             | Headless Chrome    |
+| Input formats        | Markdown / MDX     |
+| Built-in components  | 3 (DeepDive, Warning, Axiom) |
+| Default paper size   | A4                 |
+| Network access       | Blocked by default |
+
+Every value above is asserted by this example's own test — if the table
+above ever fails to render, `go test ./examples/...` fails too.

@@ -30,5 +30,12 @@ before parsing.
 
 Built-in custom components: <DeepDive>, <Warning>, <Axiom>. Additional components
 can be registered via WithComponent().
+
+# Trust model
+
+MDX is parsed with raw HTML passthrough enabled, and component transpilation
+does not escape inner content. Only build PDFs from MDX you trust — see
+SECURITY.md for details. Network access during rendering is blocked by
+default (see WithNetworkAccess).
 */
 package prettypdf

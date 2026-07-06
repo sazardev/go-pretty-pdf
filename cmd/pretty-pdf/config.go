@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	prettypdf "github.com/sazardev/go-pretty-pdf"
 	"github.com/sazardev/go-pretty-pdf/config"
 	"github.com/sazardev/go-pretty-pdf/mdx"
-	"github.com/sazardev/go-pretty-pdf/render"
-	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
 const (
@@ -106,71 +102,11 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 }
 
 func buildOpts(cfg *config.Config) []prettypdf.Option {
-	opts := []prettypdf.Option{
+	return []prettypdf.Option{
 		prettypdf.WithVerbose(verbose),
-		prettypdf.WithConfig(cfg),
-		prettypdf.WithConfigCSSAndTemplate(cfg),
+		prettypdf.WithFullConfig(cfg),
+		prettypdf.WithValidator(validatorFromConfig(cfg)),
 	}
-
-	if len(cfg.Vars) > 0 {
-		opts = append(opts, prettypdf.WithVars(cfg.Vars))
-	}
-
-	validator := validatorFromConfig(cfg)
-	opts = append(opts, prettypdf.WithValidator(validator))
-
-	if cfg.Theme != "" && cfg.Theme != defaultTheme {
-		switch cfg.Theme {
-		case "minimal":
-			opts = append(opts, prettypdf.WithTheme(theme.Minimal))
-		}
-	}
-
-	if cfg.Render.Timeout != "" {
-		d, err := time.ParseDuration(cfg.Render.Timeout)
-		if err == nil {
-			opts = append(opts, prettypdf.WithTimeout(d))
-		}
-	}
-
-	renderCfg := cfg.Render
-	if renderCfg.Paper != "" {
-		switch strings.ToLower(renderCfg.Paper) {
-		case "letter":
-			opts = append(opts, prettypdf.WithPaperSize(8.5, 11))
-		case "legal":
-			opts = append(opts, prettypdf.WithPaperSize(8.5, 14))
-		case "a4":
-			opts = append(opts, prettypdf.WithPaperSize(8.27, 11.69))
-		}
-	}
-
-	defOpts := render.DefaultOptions()
-	mt := parseCSSUnit(renderCfg.MarginTop)
-	mb := parseCSSUnit(renderCfg.MarginBot)
-	ml := parseCSSUnit(renderCfg.MarginLeft)
-	mr := parseCSSUnit(renderCfg.MarginRight)
-	if mt != 0 || mb != 0 || ml != 0 || mr != 0 {
-		if mt == 0 {
-			mt = defOpts.MarginTop
-		}
-		if mb == 0 {
-			mb = defOpts.MarginBottom
-		}
-		if ml == 0 {
-			ml = defOpts.MarginLeft
-		}
-		if mr == 0 {
-			mr = defOpts.MarginRight
-		}
-		opts = append(opts, prettypdf.WithRenderMargins(mt, mb, ml, mr))
-	}
-
-	if renderCfg.HeaderTitle != "" {
-		opts = append(opts, prettypdf.WithHeaderTitle(renderCfg.HeaderTitle))
-	}
-
-	return opts
 }
 
 func validatorFromConfig(cfg *config.Config) *mdx.DefaultValidator {
@@ -192,32 +128,6 @@ func parserFromConfig(cfg *config.Config) *mdx.Parser {
 		parserOpts = append(parserOpts, mdx.WithVars(cfg.Vars))
 	}
 	return mdx.NewParser(parserOpts...)
-}
-
-func parseCSSUnit(s string) float64 {
-	if s == "" {
-		return 0
-	}
-	s = strings.TrimSpace(s)
-
-	var value float64
-	var unit string
-	_, _ = fmt.Sscanf(s, "%f%s", &value, &unit)
-
-	switch strings.ToLower(unit) {
-	case "in":
-		return value
-	case "mm":
-		return value / 25.4
-	case "cm":
-		return value / 2.54
-	case "pt":
-		return value / 72.0
-	case "px":
-		return value / 96.0
-	default:
-		return 0
-	}
 }
 
 func cfgFileFound() bool {
