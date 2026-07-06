@@ -54,6 +54,11 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 			chromedp.NoSandbox,
 			chromedp.Headless,
 			chromedp.Flag("disable-dev-shm-usage", true),
+			// Chrome can take longer than chromedp's 20s default to print its
+			// DevTools websocket URL on a cold/loaded CI runner (e.g. right
+			// after a fresh install); give it more room to avoid a spurious
+			// "websocket url timeout reached" before the browser even starts.
+			chromedp.WSURLReadTimeout(45*time.Second),
 		)...,
 	)
 	defer allocCancel()
@@ -134,13 +139,14 @@ func CheckChromeAvailable() error {
 		chromedp.NoSandbox,
 		chromedp.Headless,
 		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.WSURLReadTimeout(15*time.Second),
 	)
 	defer allocCancel()
 
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
 	return chromedp.Run(ctx)

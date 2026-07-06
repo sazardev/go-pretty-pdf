@@ -13,7 +13,7 @@ import (
 // section toggles.
 func ResolveByName(name string, opts Options, cwd string) (string, ResolvedSections, error) {
 	if name == "" {
-		name = "default"
+		name = NameDefault
 	}
 
 	switch {

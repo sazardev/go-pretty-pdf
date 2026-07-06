@@ -6,12 +6,11 @@ import (
 )
 
 func TestGetAndList(t *testing.T) {
-	want := []string{"default", "minimal", "modern", "classic", "corporate", "dark", "academic", "editorial"}
 	list := List()
-	if len(list) != len(want) {
-		t.Fatalf("expected %d builtin themes, got %d", len(want), len(list))
+	if len(list) != len(order) {
+		t.Fatalf("expected %d builtin themes, got %d", len(order), len(list))
 	}
-	for i, name := range want {
+	for i, name := range order {
 		if list[i].Name != name {
 			t.Errorf("List()[%d].Name = %q, want %q", i, list[i].Name, name)
 		}
@@ -23,8 +22,8 @@ func TestGetAndList(t *testing.T) {
 	if _, ok := Get("does-not-exist"); ok {
 		t.Error("expected Get to report false for an unknown theme")
 	}
-	if t2, ok := Get("dark"); !ok || t2.Name != "dark" {
-		t.Errorf("expected Get(\"dark\") to return the dark theme, got %+v, %v", t2, ok)
+	if t2, ok := Get(NameDark); !ok || t2.Name != NameDark {
+		t.Errorf("expected Get(%q) to return the dark theme, got %+v, %v", NameDark, t2, ok)
 	}
 }
 
@@ -50,7 +49,7 @@ func TestResolveIncludesBaseAndThemeCSS(t *testing.T) {
 }
 
 func TestResolveColorAndFontOverrides(t *testing.T) {
-	th, _ := Get("default")
+	th, _ := Get(NameDefault)
 
 	css, _, err := Resolve(th, Options{
 		Colors: Colors{Primary: "#ff0000", Accent: "#00ff00"},
@@ -71,7 +70,7 @@ func TestResolveColorAndFontOverrides(t *testing.T) {
 }
 
 func TestResolveSectionToggles(t *testing.T) {
-	th, _ := Get("default")
+	th, _ := Get(NameDefault)
 
 	css, sections, err := Resolve(th, Options{
 		Sections: Sections{Cover: BoolPtr(false), Header: BoolPtr(false)},
@@ -97,14 +96,14 @@ func TestResolveSectionToggles(t *testing.T) {
 }
 
 func TestResolveInvalidDensity(t *testing.T) {
-	th, _ := Get("default")
+	th, _ := Get(NameDefault)
 	if _, _, err := Resolve(th, Options{Density: "extreme"}); err == nil {
 		t.Error("expected an error for an unknown density value")
 	}
 }
 
 func TestResolveGoogleFontsImportOnlyWhenAllowed(t *testing.T) {
-	th, _ := Get("default")
+	th, _ := Get(NameDefault)
 
 	css, _, err := Resolve(th, Options{
 		Fonts:             Fonts{GoogleImports: []string{"Inter:400,600"}},

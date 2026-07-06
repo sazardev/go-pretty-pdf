@@ -99,7 +99,7 @@ func ListCustom(cwd string) ([]CustomThemeInfo, error) {
 func ScaffoldYAML(name string, from Theme) string {
 	base := from.Name
 	if base == "" {
-		base = "default"
+		base = NameDefault
 	}
 	return fmt.Sprintf(`# Custom go-pretty-pdf theme.
 # Generated with: pretty-pdf theme new %s --from %s

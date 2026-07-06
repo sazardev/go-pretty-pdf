@@ -29,68 +29,89 @@ var academicCSS string
 //go:embed assets/editorial.css
 var editorialCSS string
 
+// Builtin theme names, usable with Get/ResolveByName and as extends: values
+// in custom theme YAML.
+const (
+	NameDefault   = "default"
+	NameMinimal   = "minimal"
+	NameModern    = "modern"
+	NameClassic   = "classic"
+	NameCorporate = "corporate"
+	NameDark      = "dark"
+	NameAcademic  = "academic"
+	NameEditorial = "editorial"
+)
+
+const (
+	categoryProfessional = "professional"
+	categoryMinimal      = "minimal"
+	categoryEditorial    = "editorial"
+	categoryDark         = "dark"
+	categoryAcademic     = "academic"
+)
+
 var allSectionsOn = ResolvedSections{Cover: true, TOC: true, PageNumbers: true, Header: true}
 
 // order lists builtin theme names in the order List() should return them.
 var order = []string{
-	"default", "minimal", "modern", "classic",
-	"corporate", "dark", "academic", "editorial",
+	NameDefault, NameMinimal, NameModern, NameClassic,
+	NameCorporate, NameDark, NameAcademic, NameEditorial,
 }
 
 var registry = map[string]Theme{
-	"default": {
-		Name:        "default",
+	NameDefault: {
+		Name:        NameDefault,
 		Description: "Clean, professional look that fits any technical document.",
-		Category:    "professional",
+		Category:    categoryProfessional,
 		CSS:         defaultCSS,
 		Sections:    allSectionsOn,
 	},
-	"minimal": {
-		Name:        "minimal",
+	NameMinimal: {
+		Name:        NameMinimal,
 		Description: "Stripped down: smaller type, no borders, maximum simplicity.",
-		Category:    "minimal",
+		Category:    categoryMinimal,
 		CSS:         minimalCSS,
 		Sections:    allSectionsOn,
 	},
-	"modern": {
-		Name:        "modern",
+	NameModern: {
+		Name:        NameModern,
 		Description: "Sans-serif with generous whitespace and bold accent underlines.",
-		Category:    "professional",
+		Category:    categoryProfessional,
 		CSS:         modernCSS,
 		Sections:    allSectionsOn,
 	},
-	"classic": {
-		Name:        "classic",
+	NameClassic: {
+		Name:        NameClassic,
 		Description: "Serif, traditional book layout — ink on paper.",
-		Category:    "editorial",
+		Category:    categoryEditorial,
 		CSS:         classicCSS,
 		Sections:    allSectionsOn,
 	},
-	"corporate": {
-		Name:        "corporate",
+	NameCorporate: {
+		Name:        NameCorporate,
 		Description: "Structured blue/gray palette for client-facing reports.",
-		Category:    "professional",
+		Category:    categoryProfessional,
 		CSS:         corporateCSS,
 		Sections:    allSectionsOn,
 	},
-	"dark": {
-		Name:        "dark",
+	NameDark: {
+		Name:        NameDark,
 		Description: "Dark background with light text. Best for on-screen PDFs.",
-		Category:    "dark",
+		Category:    categoryDark,
 		CSS:         darkCSS,
 		Sections:    allSectionsOn,
 	},
-	"academic": {
-		Name:        "academic",
+	NameAcademic: {
+		Name:        NameAcademic,
 		Description: "Formal serif layout for theses, papers, and reports.",
-		Category:    "academic",
+		Category:    categoryAcademic,
 		CSS:         academicCSS,
 		Sections:    allSectionsOn,
 	},
-	"editorial": {
-		Name:        "editorial",
+	NameEditorial: {
+		Name:        NameEditorial,
 		Description: "Magazine-style display headings and pull-quote blockquotes.",
-		Category:    "editorial",
+		Category:    categoryEditorial,
 		CSS:         editorialCSS,
 		Sections:    allSectionsOn,
 	},

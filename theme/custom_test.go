@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+// testCustomThemeName is shared across theme package tests to avoid
+// repeating the same custom-theme-name literal (flagged by goconst).
+const testCustomThemeName = "mine"
+
 func writeThemeFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
@@ -34,8 +38,8 @@ css: |
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if ct.Extends != "classic" {
-		t.Errorf("expected extends 'classic', got %q", ct.Extends)
+	if ct.Extends != NameClassic {
+		t.Errorf("expected extends %q, got %q", NameClassic, ct.Extends)
 	}
 
 	css, sections, err := ct.Resolve(Options{})
@@ -51,15 +55,15 @@ css: |
 	if sections.Cover {
 		t.Error("expected cover to be disabled per the custom theme's sections block")
 	}
-	if !strings.Contains(css, "classic") {
+	if !strings.Contains(css, NameClassic) {
 		t.Error("expected the extended base theme's CSS to be included")
 	}
 }
 
 func TestCustomThemeCLIOptionsOverrideYAMLDefaults(t *testing.T) {
 	ct := &CustomTheme{
-		Name:    "mine",
-		Extends: "default",
+		Name:    testCustomThemeName,
+		Extends: NameDefault,
 		Colors:  Colors{Primary: "#111111"},
 		Sections: Sections{
 			Cover: BoolPtr(false),
@@ -83,7 +87,7 @@ func TestCustomThemeCLIOptionsOverrideYAMLDefaults(t *testing.T) {
 }
 
 func TestCustomThemeUnknownExtends(t *testing.T) {
-	ct := &CustomTheme{Name: "mine", Extends: "does-not-exist"}
+	ct := &CustomTheme{Name: testCustomThemeName, Extends: "does-not-exist"}
 	if _, _, err := ct.Resolve(Options{}); err == nil {
 		t.Error("expected an error for an unknown extends target")
 	}

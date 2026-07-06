@@ -42,7 +42,7 @@ func LoadCustomTheme(path string) (*CustomTheme, error) {
 func (c *CustomTheme) Resolve(opts Options) (string, ResolvedSections, error) {
 	extends := c.Extends
 	if extends == "" {
-		extends = "default"
+		extends = NameDefault
 	}
 	base, ok := Get(extends)
 	if !ok {

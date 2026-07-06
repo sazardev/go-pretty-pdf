@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Named theme constants**: `NameDefault`, `NameMinimal`, `NameModern`, `NameClassic`, `NameCorporate`, `NameDark`, `NameAcademic`, `NameEditorial` exported from `theme` package — custom theme code and tests can now reference themes by constant instead of raw strings, eliminating goconst lint warnings across the codebase
+
+### Changed
+
+- **Chrome startup timeout**: raised `chromedp.WSURLReadTimeout` to 45s in `RenderToPDF` and 15s in `CheckChromeAvailable`, plus boosted `CheckChromeAvailable` context timeout from 10s to 20s — prevents spurious "websocket url timeout reached" failures on cold/loaded CI runners
+
+### Fixed
+
+- **goconst lint**: all magic string literals for builtin theme names and categories replaced with named constants in `theme/builtin.go`; tests updated to use constants and share a `testCustomThemeName` const
+
 ## [0.4.0] - 2026-07-06
 
 ### Added

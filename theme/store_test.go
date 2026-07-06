@@ -21,9 +21,9 @@ func TestFindCustomAndListCustom(t *testing.T) {
 	if _, ok := FindCustom(cwd, "does-not-exist"); ok {
 		t.Error("expected FindCustom to report false for a missing theme")
 	}
-	path, ok := FindCustom(cwd, "mine")
+	path, ok := FindCustom(cwd, testCustomThemeName)
 	if !ok {
-		t.Fatal("expected FindCustom to locate 'mine'")
+		t.Fatalf("expected FindCustom to locate %q", testCustomThemeName)
 	}
 	if filepath.Base(path) != "mine.theme.yml" {
 		t.Errorf("expected path ending in mine.theme.yml, got %s", path)
@@ -36,8 +36,8 @@ func TestFindCustomAndListCustom(t *testing.T) {
 	if len(list) != 2 {
 		t.Fatalf("expected 2 custom themes, got %d: %+v", len(list), list)
 	}
-	if list[0].Name != "mine" || list[1].Name != "other" {
-		t.Errorf("expected sorted names [mine, other], got [%s, %s]", list[0].Name, list[1].Name)
+	if list[0].Name != testCustomThemeName || list[1].Name != "other" {
+		t.Errorf("expected sorted names [%s, other], got [%s, %s]", testCustomThemeName, list[0].Name, list[1].Name)
 	}
 	for _, c := range list {
 		if c.Global {
@@ -58,9 +58,9 @@ func TestListCustomEmptyDirDoesNotError(t *testing.T) {
 }
 
 func TestScaffoldYAMLIsValidAndLoadable(t *testing.T) {
-	base, _ := Get("classic")
+	base, _ := Get(NameClassic)
 	yamlContent := ScaffoldYAML("my-theme", base)
-	if !strings.Contains(yamlContent, "extends: classic") {
+	if !strings.Contains(yamlContent, "extends: "+NameClassic) {
 		t.Error("expected scaffold to extend the given base theme")
 	}
 
@@ -70,7 +70,7 @@ func TestScaffoldYAMLIsValidAndLoadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected scaffolded YAML to parse cleanly, got: %v", err)
 	}
-	if ct.Name != "my-theme" || ct.Extends != "classic" {
+	if ct.Name != "my-theme" || ct.Extends != NameClassic {
 		t.Errorf("unexpected parsed scaffold: %+v", ct)
 	}
 	if _, _, err := ct.Resolve(Options{}); err != nil {
@@ -86,10 +86,10 @@ func TestResolveByNameBuiltinCustomAndUnknown(t *testing.T) {
 	}
 	writeThemeFile(t, themesDir, "mine.theme.yml", "name: mine\nextends: dark\n")
 
-	if _, _, err := ResolveByName("modern", Options{}, cwd); err != nil {
+	if _, _, err := ResolveByName(NameModern, Options{}, cwd); err != nil {
 		t.Errorf("expected builtin theme to resolve: %v", err)
 	}
-	if css, _, err := ResolveByName("mine", Options{}, cwd); err != nil {
+	if css, _, err := ResolveByName(testCustomThemeName, Options{}, cwd); err != nil {
 		t.Errorf("expected custom theme to resolve: %v", err)
 	} else if !strings.Contains(css, "dark") {
 		t.Error("expected resolved CSS to include the extended (dark) theme's CSS")
@@ -126,7 +126,7 @@ func TestResolveByNameDirectThemeYAMLPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(css, "academic") {
+	if !strings.Contains(css, NameAcademic) {
 		t.Error("expected resolved CSS to include the extended (academic) theme's CSS")
 	}
 }
