@@ -1,91 +1,189 @@
+// Package theme implements go-pretty-pdf's theme engine: a set of
+// professional built-in themes plus a customization layer (colors, fonts,
+// section toggles, density) that composes on top of them via CSS custom
+// properties, and a YAML format for user-defined custom themes.
 package theme
 
+import (
+	"fmt"
+	"strings"
+)
+
+// Theme is a built-in (or synthetic) theme: a name plus the CSS that
+// implements its palette/typography and any structural deltas on top of
+// the shared base stylesheet.
 type Theme struct {
-	Name     string
-	CSS      string
-	Template string
+	Name        string
+	Description string
+	Category    string
+	CSS         string
+	// Sections holds this theme's own section defaults (all true unless a
+	// theme has a good reason to ship differently).
+	Sections ResolvedSections
 }
 
-var Default = Theme{
-	Name: "default",
+// Colors overrides the CSS custom properties a theme's palette is built
+// from. Empty fields fall back to the theme's own defaults.
+type Colors struct {
+	Primary    string `yaml:"primary"`
+	Accent     string `yaml:"accent"`
+	Text       string `yaml:"text"`
+	Muted      string `yaml:"muted"`
+	Background string `yaml:"background"`
 }
 
-var Minimal = Theme{
-	Name: "minimal",
-	CSS:  minimalCSS,
+// Fonts overrides the font-family custom properties a theme uses. Empty
+// fields fall back to the theme's own defaults. GoogleImports is only
+// honored when Options.AllowNetworkFonts is true.
+type Fonts struct {
+	Heading       string   `yaml:"heading"`
+	Body          string   `yaml:"body"`
+	Code          string   `yaml:"code"`
+	GoogleImports []string `yaml:"google_fonts"`
 }
 
-var minimalCSS = `@page {
-  size: A4;
-  margin: 18mm 14mm 18mm 14mm;
+// Sections toggles document sections on or off. A nil pointer means "use
+// the theme's default"; a non-nil pointer always wins.
+type Sections struct {
+	Cover       *bool `yaml:"cover"`
+	TOC         *bool `yaml:"toc"`
+	PageNumbers *bool `yaml:"page_numbers"`
+	Header      *bool `yaml:"header"`
 }
 
-body {
-  font-family: system-ui, sans-serif;
-  font-size: 10pt;
-  line-height: 1.5;
-  color: #222;
+// ResolvedSections is Sections after defaults have been applied — every
+// field has a concrete value.
+type ResolvedSections struct {
+	Cover       bool
+	TOC         bool
+	PageNumbers bool
+	Header      bool
 }
 
-h1 { font-size: 16pt; page-break-before: always; }
-h2 { font-size: 13pt; }
-h3 { font-size: 11pt; }
-h4 { font-size: 10.5pt; }
-h5 { font-size: 10pt; }
+// Density adjusts overall spacing/line-height. The empty string means
+// "normal" (the theme's own defaults, no adjustment).
+type Density string
 
-pre {
-  background: #fafafa;
-  padding: 8px 10px;
-  font-size: 8.5pt;
-  page-break-inside: avoid;
+const (
+	DensityCompact Density = "compact"
+	DensityNormal  Density = "normal"
+	DensityRelaxed Density = "relaxed"
+)
+
+// Options customizes a Theme at resolve time: colors, fonts, section
+// toggles, density, and whether network-fetched (Google) fonts are allowed.
+type Options struct {
+	Colors            Colors
+	Fonts             Fonts
+	Sections          Sections
+	Density           Density
+	AllowNetworkFonts bool
 }
 
-code {
-  font-family: monospace;
-  font-size: 9pt;
-  background: #f4f4f4;
-  padding: 1px 3px;
+// BoolPtr is a small helper for constructing Sections literals, e.g.
+// theme.Sections{Cover: theme.BoolPtr(false)}.
+func BoolPtr(b bool) *bool { return &b }
+
+// Resolve builds the final CSS for theme t customized by opts, and returns
+// the section toggles after defaults have been applied. The CSS is
+// assembled as: optional Google Fonts @import, the shared base stylesheet,
+// the theme's own CSS, a :root override block for any customized
+// colors/fonts/density, and CSS for any disabled sections (cover/TOC).
+// Page numbers and the running header are not CSS-controlled; callers wire
+// ResolvedSections.PageNumbers/Header into render.Options.
+func Resolve(t Theme, opts Options) (string, ResolvedSections, error) {
+	sections := mergeSections(t.Sections, opts.Sections)
+
+	var root []string
+	appendVar := func(name, value string) {
+		if value != "" {
+			root = append(root, fmt.Sprintf("--pdf-%s: %s;", name, value))
+		}
+	}
+	appendVar("primary", opts.Colors.Primary)
+	appendVar("accent", opts.Colors.Accent)
+	appendVar("text", opts.Colors.Text)
+	appendVar("muted", opts.Colors.Muted)
+	appendVar("bg", opts.Colors.Background)
+	appendVar("font-heading", opts.Fonts.Heading)
+	appendVar("font-body", opts.Fonts.Body)
+	appendVar("font-code", opts.Fonts.Code)
+
+	switch opts.Density {
+	case DensityCompact:
+		root = append(root, "--pdf-line-height: 1.35;", "--pdf-space-scale: 0.7;")
+	case DensityRelaxed:
+		root = append(root, "--pdf-line-height: 1.85;", "--pdf-space-scale: 1.35;")
+	case DensityNormal, "":
+		// no override — base/theme defaults apply
+	default:
+		return "", ResolvedSections{}, fmt.Errorf("unknown density %q (expected compact, normal, or relaxed)", opts.Density)
+	}
+
+	var b strings.Builder
+	if opts.AllowNetworkFonts {
+		if imp := googleFontsImport(opts.Fonts.GoogleImports); imp != "" {
+			b.WriteString(imp)
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString(baseCSS)
+	b.WriteString("\n")
+	b.WriteString(t.CSS)
+	b.WriteString("\n")
+	if len(root) > 0 {
+		b.WriteString(":root{" + strings.Join(root, "") + "}\n")
+	}
+	if !sections.Cover {
+		b.WriteString(".cover{display:none !important;}\n")
+	}
+	if !sections.TOC {
+		b.WriteString(".toc{display:none !important;}\n")
+	}
+
+	return b.String(), sections, nil
 }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 9pt;
+func mergeSections(base ResolvedSections, override Sections) ResolvedSections {
+	r := base
+	if override.Cover != nil {
+		r.Cover = *override.Cover
+	}
+	if override.TOC != nil {
+		r.TOC = *override.TOC
+	}
+	if override.PageNumbers != nil {
+		r.PageNumbers = *override.PageNumbers
+	}
+	if override.Header != nil {
+		r.Header = *override.Header
+	}
+	return r
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 4px 8px;
+func googleFontsImport(families []string) string {
+	if len(families) == 0 {
+		return ""
+	}
+	cleaned := make([]string, 0, len(families))
+	for _, f := range families {
+		f = strings.TrimSpace(f)
+		if f == "" {
+			continue
+		}
+		cleaned = append(cleaned, strings.ReplaceAll(f, " ", "+"))
+	}
+	if len(cleaned) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("@import url('https://fonts.googleapis.com/css?family=%s&display=swap');", strings.Join(cleaned, "|"))
 }
 
-th { background: #f0f0f0; }
-
-.cover { min-height: 70vh; }
-.cover h1 { font-size: 24pt; page-break-before: avoid; }
-.cover-subtitle { font-size: 11pt; color: #666; }
-
-.toc h1 { font-size: 18pt; }
-.toc-h2 { padding-left: 16pt; }
-.toc-h3 { padding-left: 32pt; }
-.toc-h4 { padding-left: 48pt; }
-.toc-h5 { padding-left: 64pt; }
-
-.component-deep-dive {
-  background: #f5f8ff;
-  border-left: 3px solid #4a6cf7;
-  padding: 8px 12px;
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
-
-.component-warning {
-  background: #fffbed;
-  border-left: 3px solid #f7a84a;
-  padding: 8px 12px;
-}
-
-.component-axiom {
-  background: #f5faf5;
-  border-left: 3px solid #4caf50;
-  padding: 8px 12px;
-  font-style: italic;
-}
-`

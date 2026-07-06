@@ -23,7 +23,7 @@ pdf.go             Root package — public API: New(), Build(), Validate(), func
 mdx/               MDX parser (goldmark-based), custom component transpiler, validator interface
 compose/           HTML composition: TOC, go:embed'd template.html + print.css
 render/            Chrome headless PDF rendering via chromedp
-theme/             Theme structs bundling CSS + template overrides
+theme/             Theme engine: 8 builtin themes over a shared base.css, custom .theme.yml themes, section toggles
 ```
 
 ### Pipeline

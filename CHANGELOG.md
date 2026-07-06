@@ -5,7 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-07-06
+## [0.4.0] - 2026-07-06
+
+### Added
+
+- **Theme engine overhaul**: `theme` package now has a proper engine with `Resolve()`, `ResolveByName()` — merges base CSS + theme CSS + `:root` custom property overrides (colors, fonts, density) + section toggles
+- **8 builtin themes**: default, minimal, modern, classic, corporate, dark, academic, editorial — each with dedicated CSS files embedded via `//go:embed`, with categories (professional, editorial, dark, academic, minimal)
+- **Custom theme system**: `<name>.theme.yml` files extending a builtin theme, discovered in `./themes/` (project-local) and `~/.config/pretty-pdf/themes` (global) — full YAML schema with `extends`, `colors`, `fonts`, `sections`, `density`, and raw `css` escape hatch
+- **`theme` CLI subcommand** with 4 subcommands:
+  - `theme list` — shows builtin + custom themes with descriptions
+  - `theme show <name>` — prints fully-resolved CSS to stdout
+  - `theme new <name>` — scaffolds a starter `.theme.yml` (with `--from` and `--global` flags)
+  - `theme add <path>` — imports existing `.theme.yml` or `.css` files as managed custom themes (with `--as` and `--global` flags)
+- **Section toggles** (cover, TOC, page numbers, header) controlled via:
+  - CLI flags: `--no-cover`, `--no-toc`, `--no-page-numbers`, `--no-header`
+  - Config: `theme_options.sections.cover`, `.toc`, `.page_numbers`, `.header` (nullable booleans — unset = theme default)
+  - Template gating: `{{if .ShowCover}}` / `{{if .ShowTOC}}` wrapping the cover block and TOC in `template.html`
+  - CSS gating: `.cover{display:none !important;}` / `.toc{display:none !important;}` appended by `Resolve()` for disabled sections
+  - `render.Options.PageNumbers` and `render.Options.ShowHeader` — when disabled, Chrome header/footer templates render `<div></div>` (empty)
+- **Color/font customization**: `--color-*` and `--font-*` CLI flags + `theme_options.colors`/`fonts` in config — drives `--pdf-*` CSS custom properties in a `:root` block
+- **Density control**: `--density compact|normal|relaxed` CLI flag + `theme_options.density` — adjusts `--pdf-line-height` and `--pdf-space-scale`
+- **Google Fonts support**: `fonts.google_fonts` in theme YAML/config, fetched only when `allow_network_fonts: true` (network disabled by default for security)
+- **`WithThemeName(name, opts)` option**: resolves a theme by name (builtin, custom, or file path) with full opts customization, wiring section toggles into `composeOpts`/`renderOpts`
+- **`WithNetworkAccess(bool)` wired into CLI**: `--allow-network-fonts` flag enables outbound Chrome requests
+- **Config struct**: `ThemeOptionsConfig`, `ColorsConfig`, `FontsConfig`, `SectionsConfig` with full YAML serialization
+- **Test suite**: 20 new tests across `theme/`, `pdf_test.go`, `compose/compose_test.go`, `render/render_test.go`, `config/config_test.go`
+
+### Changed
+
+- `theme.Theme` struct: now includes `Description`, `Category`, `Sections` (resolved defaults), and `CSS` comes from dedicated asset files instead of raw Go strings
+- `WithTheme(t)` — now applies CSS only (no template); section toggles must be set separately
+- `WithConfigCSSAndTemplate` — resolves `cfg.Theme` via `ResolveByName` with full `ThemeOptionsConfig` customization before applying explicit CSS/template file overrides
+- Old hardcoded `theme.Minimal.CSS` inline string replaced by `//go:embed assets/minimal.css`
+- `cmd/pretty-pdf/main.go` — `--theme` flag usage now lists all builtin theme names dynamically from `theme.List()`
+- `cmd/pretty-pdf/config.go` — maps CLI flags to `cfg.ThemeOptions` (colors, fonts, sections, density, network)
+- `docs/cli.md` — comprehensive docs for all new flags, config fields, theme subcommands, custom theme workflow
+
+### Removed
+
+- Inline `minimalCSS` string in `theme/theme.go` — CSS now lives in `theme/assets/*.css`
+
+### Security
+
+- Google Fonts (`fonts.google_fonts`) require explicit `allow_network_fonts: true` — network access remains blocked by default during headless Chrome rendering
 
 ### Added
 
@@ -93,4 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI (lint, test, vet, build on 3 OS) and release pipeline (goreleaser)
 - Local Makefile with lint, test, build, and release-dry-run targets
 
+[0.4.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.4.0
+[0.3.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.3.0
+[0.2.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.1.0

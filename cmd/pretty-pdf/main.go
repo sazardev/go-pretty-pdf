@@ -4,12 +4,22 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/theme"
 	"github.com/sazardev/go-pretty-pdf/version"
 )
+
+func themeNames() []string {
+	names := make([]string, 0, len(theme.List()))
+	for _, t := range theme.List() {
+		names = append(names, t.Name)
+	}
+	return names
+}
 
 //go:embed initassets/*
 var initAssets embed.FS
@@ -32,6 +42,21 @@ var (
 	jsonOutput bool
 	initBare   bool
 	servePort  int
+
+	noCover           bool
+	noTOC             bool
+	noPageNumbers     bool
+	noHeader          bool
+	colorPrimary      string
+	colorAccent       string
+	colorText         string
+	colorMuted        string
+	colorBg           string
+	fontHeading       string
+	fontBody          string
+	fontCode          string
+	density           string
+	allowNetworkFonts bool
 )
 
 var rootCmd = &cobra.Command{
@@ -98,6 +123,7 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(themeCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file")
 	rootCmd.PersistentFlags().StringVar(&sourceDir, "source", "book", "source MDX directory")
@@ -109,11 +135,26 @@ func init() {
 	buildCmd.Flags().StringVar(&title, "title", "", "book title")
 	buildCmd.Flags().StringVar(&subtitle, "subtitle", "", "book subtitle")
 	buildCmd.Flags().StringVar(&author, "author", "", "book author")
-	buildCmd.Flags().StringVar(&themeName, "theme", defaultTheme, "book theme (default, minimal)")
-	buildCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path")
-	buildCmd.Flags().StringVar(&tmplPath, "template", "", "custom HTML template file path")
+	buildCmd.Flags().StringVar(&themeName, "theme", defaultTheme, fmt.Sprintf("book theme (%s, or a custom theme name/path)", strings.Join(themeNames(), ", ")))
+	buildCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path (overrides theme)")
+	buildCmd.Flags().StringVar(&tmplPath, "template", "", "custom HTML template file path (overrides theme)")
 	buildCmd.Flags().StringVar(&timeoutStr, "timeout", "", "render timeout (e.g. 30s, 1m)")
 	buildCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
+
+	buildCmd.Flags().BoolVar(&noCover, "no-cover", false, "omit the cover page")
+	buildCmd.Flags().BoolVar(&noTOC, "no-toc", false, "omit the table of contents")
+	buildCmd.Flags().BoolVar(&noPageNumbers, "no-page-numbers", false, "omit page numbers")
+	buildCmd.Flags().BoolVar(&noHeader, "no-header", false, "omit the running page header")
+	buildCmd.Flags().StringVar(&colorPrimary, "color-primary", "", "theme override: primary color (e.g. #1a56db)")
+	buildCmd.Flags().StringVar(&colorAccent, "color-accent", "", "theme override: accent color")
+	buildCmd.Flags().StringVar(&colorText, "color-text", "", "theme override: body text color")
+	buildCmd.Flags().StringVar(&colorMuted, "color-muted", "", "theme override: muted/caption text color")
+	buildCmd.Flags().StringVar(&colorBg, "color-bg", "", "theme override: page background color")
+	buildCmd.Flags().StringVar(&fontHeading, "font-heading", "", "theme override: heading font family")
+	buildCmd.Flags().StringVar(&fontBody, "font-body", "", "theme override: body font family")
+	buildCmd.Flags().StringVar(&fontCode, "font-code", "", "theme override: code font family")
+	buildCmd.Flags().StringVar(&density, "density", "", "spacing density: compact, normal, or relaxed")
+	buildCmd.Flags().BoolVar(&allowNetworkFonts, "allow-network-fonts", false, "allow fetching Google Fonts declared by the theme (enables network access)")
 
 	checkCmd.Flags().BoolVar(&strict, "strict", false, "treat content warnings as errors")
 

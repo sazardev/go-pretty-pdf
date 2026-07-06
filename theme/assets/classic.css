@@ -1,0 +1,45 @@
+/* classic — serif, traditional book layout, ink on paper. */
+
+:root {
+  --pdf-primary: #1c1c1c;
+  --pdf-accent: #7a4a2b;
+  --pdf-text: #1c1c1c;
+  --pdf-muted: #5a5a5a;
+  --pdf-bg: #fffdf8;
+  --pdf-surface: #f7f3ea;
+  --pdf-surface-2: #f2ede1;
+  --pdf-border: #d8cfba;
+  --pdf-info: #4a5d7a;
+  --pdf-warn: #8a5a2b;
+  --pdf-success: #3f6b3f;
+  --pdf-font-heading: 'Georgia', 'Iowan Old Style', 'Palatino', serif;
+  --pdf-font-body: 'Georgia', 'Palatino', 'Times New Roman', serif;
+  --pdf-font-code: 'Courier New', Consolas, monospace;
+  --pdf-line-height: 1.65;
+}
+
+h1, h2 {
+  border-bottom: 1px solid var(--pdf-border, #d8cfba);
+  padding-bottom: 6pt;
+  font-weight: 700;
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+}
+
+.cover h1 {
+  font-style: italic;
+  border-bottom: 2px solid var(--pdf-accent, #7a4a2b);
+  padding-bottom: 12pt;
+  display: inline-block;
+}
+
+.cover-subtitle {
+  max-width: 100%;
+}
+
+blockquote {
+  font-style: italic;
+}

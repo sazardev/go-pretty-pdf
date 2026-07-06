@@ -26,6 +26,32 @@ func TestDefaultOptions(t *testing.T) {
 	if opts.PaperWidth == 0 || opts.PaperHeight == 0 {
 		t.Error("expected non-zero default paper size")
 	}
+	if !opts.PageNumbers {
+		t.Error("expected PageNumbers to default to true")
+	}
+	if !opts.ShowHeader {
+		t.Error("expected ShowHeader to default to true")
+	}
+}
+
+func TestRenderToPDFPageNumbersAndHeaderDisabled(t *testing.T) {
+	requireChrome(t)
+
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "out.pdf")
+
+	opts := DefaultOptions()
+	opts.PageNumbers = false
+	opts.ShowHeader = false
+	opts.HeaderTitle = "Should Not Appear"
+
+	if err := RenderToPDF(`<html><body><h1>Content</h1></body></html>`, outPath, opts); err != nil {
+		t.Fatalf("RenderToPDF failed: %v", err)
+	}
+	info, err := os.Stat(outPath)
+	if err != nil || info.Size() == 0 {
+		t.Fatal("expected a non-empty PDF even with header/footer disabled")
+	}
 }
 
 func TestRenderToPDFProducesFile(t *testing.T) {

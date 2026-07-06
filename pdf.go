@@ -80,18 +80,40 @@ func WithTemplate(html string) Option {
 	}
 }
 
-// WithTheme applies a pre-built theme's CSS and template. It shares
-// composeOpts.CSS/Template with WithCSS, WithTemplate, and the theme branch
-// of WithConfigCSSAndTemplate — whichever of these options is applied last
-// wins, since New() applies options in the order they're passed.
+// WithTheme applies a raw builtin/synthetic Theme's CSS as-is, with no
+// customization (colors/fonts/sections/density) and no section toggles
+// applied. It shares composeOpts.CSS with WithCSS and WithThemeName —
+// whichever of these options is applied last wins, since New() applies
+// options in the order they're passed. Most callers should prefer
+// WithThemeName, which resolves section toggles (cover/TOC/page
+// numbers/header) into composeOpts/renderOpts too.
 func WithTheme(t theme.Theme) Option {
 	return func(p *PDF) {
 		if t.CSS != "" {
 			p.composeOpts.CSS = t.CSS
 		}
-		if t.Template != "" {
-			p.composeOpts.Template = t.Template
+	}
+}
+
+// WithThemeName resolves a theme by name — a builtin ("default",
+// "corporate", ...), a custom theme discovered in ./themes/ or the global
+// themes directory, or a direct path to a .theme.yml/.css file — applies
+// opts customization (colors, fonts, density, network fonts), and wires
+// the resulting section toggles (cover, TOC, page numbers, header) into
+// composeOpts/renderOpts.
+func WithThemeName(name string, opts theme.Options) Option {
+	return func(p *PDF) {
+		cwd, _ := os.Getwd()
+		css, sections, err := theme.ResolveByName(name, opts, cwd)
+		if err != nil {
+			p.pendingWarnings = append(p.pendingWarnings, fmt.Sprintf("theme %q: %v", name, err))
+			return
 		}
+		p.composeOpts.CSS = css
+		p.composeOpts.ShowCover = sections.Cover
+		p.composeOpts.ShowTOC = sections.TOC
+		p.renderOpts.PageNumbers = sections.PageNumbers
+		p.renderOpts.ShowHeader = sections.Header
 	}
 }
 
@@ -182,12 +204,56 @@ func WithConfig(cfg *config.Config) Option {
 	}
 }
 
-// WithConfigCSSAndTemplate loads CSS and template content from the file
-// paths in cfg. Read failures are recorded as warnings and flushed to
-// stderr by New() once all options have been applied, so ordering
-// relative to WithVerbose does not matter.
+// themeOptionsFromConfig converts cfg.ThemeOptions (as loaded from
+// go-pretty-pdf.yml or set by CLI flags) into theme.Options.
+func themeOptionsFromConfig(cfg *config.Config) theme.Options {
+	to := cfg.ThemeOptions
+	return theme.Options{
+		Colors: theme.Colors{
+			Primary:    to.Colors.Primary,
+			Accent:     to.Colors.Accent,
+			Text:       to.Colors.Text,
+			Muted:      to.Colors.Muted,
+			Background: to.Colors.Background,
+		},
+		Fonts: theme.Fonts{
+			Heading:       to.Fonts.Heading,
+			Body:          to.Fonts.Body,
+			Code:          to.Fonts.Code,
+			GoogleImports: to.Fonts.GoogleFonts,
+		},
+		Sections: theme.Sections{
+			Cover:       to.Sections.Cover,
+			TOC:         to.Sections.TOC,
+			PageNumbers: to.Sections.PageNumbers,
+			Header:      to.Sections.Header,
+		},
+		Density:           theme.Density(to.Density),
+		AllowNetworkFonts: to.AllowNetworkFonts,
+	}
+}
+
+// WithConfigCSSAndTemplate resolves cfg.Theme (with cfg.ThemeOptions
+// customization) and then loads CSS/template content from cfg.CSS/
+// cfg.Template, which — being explicit file overrides — take priority over
+// the theme and replace its CSS/template outright. Read/resolve failures
+// are recorded as warnings and flushed to stderr by New() once all options
+// have been applied, so ordering relative to WithVerbose does not matter.
 func WithConfigCSSAndTemplate(cfg *config.Config) Option {
 	return func(p *PDF) {
+		if cfg.Theme != "" {
+			cwd, _ := os.Getwd()
+			css, sections, err := theme.ResolveByName(cfg.Theme, themeOptionsFromConfig(cfg), cwd)
+			if err != nil {
+				p.pendingWarnings = append(p.pendingWarnings, fmt.Sprintf("theme %q: %v", cfg.Theme, err))
+			} else {
+				p.composeOpts.CSS = css
+				p.composeOpts.ShowCover = sections.Cover
+				p.composeOpts.ShowTOC = sections.TOC
+				p.renderOpts.PageNumbers = sections.PageNumbers
+				p.renderOpts.ShowHeader = sections.Header
+			}
+		}
 		if cfg.CSS != "" {
 			data, err := os.ReadFile(cfg.CSS)
 			if err == nil {
@@ -202,13 +268,6 @@ func WithConfigCSSAndTemplate(cfg *config.Config) Option {
 				p.composeOpts.Template = string(data)
 			} else {
 				p.pendingWarnings = append(p.pendingWarnings, fmt.Sprintf("reading template file %s: %v", cfg.Template, err))
-			}
-		}
-		if cfg.Theme != "" {
-			switch cfg.Theme {
-			case "minimal":
-				p.composeOpts.CSS = theme.Minimal.CSS
-			case "default":
 			}
 		}
 	}

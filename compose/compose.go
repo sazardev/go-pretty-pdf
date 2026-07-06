@@ -19,18 +19,22 @@ var defaultTemplate string
 var defaultCSS string
 
 type Options struct {
-	Title    string
-	Subtitle string
-	Author   string
-	Template string
-	CSS      string
+	Title     string
+	Subtitle  string
+	Author    string
+	Template  string
+	CSS       string
+	ShowCover bool
+	ShowTOC   bool
 }
 
 func DefaultOptions() Options {
 	return Options{
-		Title:    "Document",
-		Subtitle: "",
-		Author:   "go-pretty-pdf",
+		Title:     "Document",
+		Subtitle:  "",
+		Author:    "go-pretty-pdf",
+		ShowCover: true,
+		ShowTOC:   true,
 	}
 }
 
@@ -52,8 +56,10 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 	keywords := collectKeywords(docs)
 
 	var bodyBuf bytes.Buffer
-	bodyBuf.WriteString(buildTOC(docs))
-	bodyBuf.WriteString(`<div style="page-break-before:always; break-before:page;"></div>` + "\n")
+	if opts.ShowTOC {
+		bodyBuf.WriteString(buildTOC(docs))
+		bodyBuf.WriteString(`<div style="page-break-before:always; break-before:page;"></div>` + "\n")
+	}
 
 	for _, doc := range docs {
 		fmt.Fprintf(&bodyBuf, `<section id="%s">`+"\n", mdx.AnchorID(doc.ID()))
@@ -70,6 +76,7 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 		Body:      template.HTML(bodyBuf.String()),
 		BuiltAt:   time.Now().Format("2006-01-02 15:04:05 UTC"),
 		TotalDocs: len(docs),
+		ShowCover: opts.ShowCover,
 	}
 
 	var out bytes.Buffer
@@ -89,6 +96,7 @@ type templateData struct {
 	Body      template.HTML
 	BuiltAt   string
 	TotalDocs int
+	ShowCover bool
 }
 
 func collectKeywords(docs []*mdx.Document) string {

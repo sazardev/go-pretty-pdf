@@ -23,6 +23,8 @@ type Options struct {
 	PaperWidth    float64
 	PaperHeight   float64
 	NetworkAccess bool
+	PageNumbers   bool
+	ShowHeader    bool
 }
 
 func DefaultOptions() Options {
@@ -39,6 +41,8 @@ func DefaultOptions() Options {
 		// self-contained data URI, so outbound network requests are
 		// blocked unless explicitly enabled.
 		NetworkAccess: false,
+		PageNumbers:   true,
+		ShowHeader:    true,
 	}
 }
 
@@ -63,12 +67,18 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 	encoded := base64.StdEncoding.EncodeToString([]byte(htmlContent))
 	dataURI := "data:text/html;charset=utf-8;base64," + encoded
 
-	headerTpl := fmt.Sprintf(
-		`<div style="font-size:8pt;font-family:system-ui,sans-serif;color:#666;padding-left:0.6in;padding-right:0.6in;">%s</div>`,
-		opts.HeaderTitle,
-	)
+	headerTpl := `<div></div>`
+	if opts.ShowHeader && opts.HeaderTitle != "" {
+		headerTpl = fmt.Sprintf(
+			`<div style="font-size:8pt;font-family:system-ui,sans-serif;color:#666;padding-left:0.6in;padding-right:0.6in;">%s</div>`,
+			opts.HeaderTitle,
+		)
+	}
 
-	footerTpl := `<div style="font-size:8pt;font-family:system-ui,sans-serif;color:#666;padding-left:0.6in;padding-right:0.6in;"><span class="title"></span><span style="float:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`
+	footerTpl := `<div></div>`
+	if opts.PageNumbers {
+		footerTpl = `<div style="font-size:8pt;font-family:system-ui,sans-serif;color:#666;padding-left:0.6in;padding-right:0.6in;"><span class="title"></span><span style="float:right;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`
+	}
 
 	var pdfBuf []byte
 

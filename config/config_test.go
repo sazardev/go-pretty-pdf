@@ -25,6 +25,61 @@ func TestDefault(t *testing.T) {
 	}
 }
 
+func TestLoadThemeOptions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "go-pretty-pdf.yml")
+	content := `theme: corporate
+theme_options:
+  colors:
+    primary: "#1a56db"
+    accent: "#0ea5e9"
+  fonts:
+    heading: "Georgia, serif"
+    google_fonts: ["Inter:400,600"]
+  sections:
+    cover: false
+    page_numbers: true
+  density: compact
+  allow_network_fonts: true
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.Theme != "corporate" {
+		t.Errorf("expected theme 'corporate', got %q", cfg.Theme)
+	}
+	if cfg.ThemeOptions.Colors.Primary != "#1a56db" {
+		t.Errorf("expected primary color '#1a56db', got %q", cfg.ThemeOptions.Colors.Primary)
+	}
+	if cfg.ThemeOptions.Fonts.Heading != "Georgia, serif" {
+		t.Errorf("expected heading font 'Georgia, serif', got %q", cfg.ThemeOptions.Fonts.Heading)
+	}
+	if len(cfg.ThemeOptions.Fonts.GoogleFonts) != 1 || cfg.ThemeOptions.Fonts.GoogleFonts[0] != "Inter:400,600" {
+		t.Errorf("expected google_fonts ['Inter:400,600'], got %v", cfg.ThemeOptions.Fonts.GoogleFonts)
+	}
+	if cfg.ThemeOptions.Sections.Cover == nil || *cfg.ThemeOptions.Sections.Cover != false {
+		t.Error("expected sections.cover to be explicitly false")
+	}
+	if cfg.ThemeOptions.Sections.PageNumbers == nil || *cfg.ThemeOptions.Sections.PageNumbers != true {
+		t.Error("expected sections.page_numbers to be explicitly true")
+	}
+	if cfg.ThemeOptions.Sections.TOC != nil {
+		t.Error("expected sections.toc to be unset (nil)")
+	}
+	if cfg.ThemeOptions.Density != "compact" {
+		t.Errorf("expected density 'compact', got %q", cfg.ThemeOptions.Density)
+	}
+	if !cfg.ThemeOptions.AllowNetworkFonts {
+		t.Error("expected allow_network_fonts to be true")
+	}
+}
+
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "go-pretty-pdf.yml")

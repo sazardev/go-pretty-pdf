@@ -75,6 +75,51 @@ func TestComposeHTMLTemplateExecFailure(t *testing.T) {
 	}
 }
 
+func TestComposeHTMLShowCoverFalse(t *testing.T) {
+	docs := []*mdx.Document{
+		docWithID("[1.0.0]", "Chapter One", "<h1>Chapter One</h1>"),
+	}
+	opts := DefaultOptions()
+	opts.ShowCover = false
+
+	html, err := ComposeHTML(docs, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(html, `class="cover"`) {
+		t.Error("expected cover to be omitted when ShowCover is false")
+	}
+	if !strings.Contains(html, `class="toc"`) {
+		t.Error("expected TOC to still render")
+	}
+}
+
+func TestComposeHTMLShowTOCFalse(t *testing.T) {
+	docs := []*mdx.Document{
+		docWithID("[1.0.0]", "Chapter One", "<h1>Chapter One</h1>"),
+	}
+	opts := DefaultOptions()
+	opts.ShowTOC = false
+
+	html, err := ComposeHTML(docs, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(html, `class="toc"`) {
+		t.Error("expected TOC to be omitted when ShowTOC is false")
+	}
+	if !strings.Contains(html, `class="cover"`) {
+		t.Error("expected cover to still render")
+	}
+}
+
+func TestDefaultOptionsShowsEverything(t *testing.T) {
+	opts := DefaultOptions()
+	if !opts.ShowCover || !opts.ShowTOC {
+		t.Error("expected DefaultOptions to show both cover and TOC")
+	}
+}
+
 func TestCollectKeywordsDedupSort(t *testing.T) {
 	docs := []*mdx.Document{
 		{Frontmatter: map[string]interface{}{"tags": []interface{}{"zebra", "apple"}}},

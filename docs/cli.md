@@ -45,11 +45,25 @@ pretty-pdf build [flags]
 | `--title` | `""` | Book title |
 | `--subtitle` | `""` | Book subtitle |
 | `--author` | `""` | Book author |
-| `--theme` | `"default"` | Book theme (`default`, `minimal`) |
-| `--css` | `""` | Custom CSS file path |
-| `--template` | `""` | Custom HTML template file path |
+| `--theme` | `"default"` | Theme name (builtin, custom, or a `.theme.yml`/`.css` path) — see [Themes](#themes) |
+| `--css` | `""` | Custom CSS file path (overrides the theme entirely) |
+| `--template` | `""` | Custom HTML template file path (overrides the theme's HTML) |
 | `--timeout` | `""` | Render timeout (e.g. `30s`, `1m`) |
 | `--json` | `false` | Output as JSON |
+| `--no-cover` | `false` | Omit the cover page |
+| `--no-toc` | `false` | Omit the table of contents |
+| `--no-page-numbers` | `false` | Omit page numbers |
+| `--no-header` | `false` | Omit the running page header |
+| `--color-primary` | `""` | Theme override: primary color (e.g. `#1a56db`) |
+| `--color-accent` | `""` | Theme override: accent color |
+| `--color-text` | `""` | Theme override: body text color |
+| `--color-muted` | `""` | Theme override: muted/caption text color |
+| `--color-bg` | `""` | Theme override: page background color |
+| `--font-heading` | `""` | Theme override: heading font family |
+| `--font-body` | `""` | Theme override: body font family |
+| `--font-code` | `""` | Theme override: code font family |
+| `--density` | `""` | Spacing density: `compact`, `normal`, or `relaxed` |
+| `--allow-network-fonts` | `false` | Allow fetching Google Fonts declared by the theme (enables network access) |
 
 #### Build Pipeline
 
@@ -84,6 +98,53 @@ pretty-pdf check [flags]
 | Flag | Default | Description |
 |---|---|---|
 | `--strict` | `false` | Treat content warnings as errors |
+
+---
+
+### `theme`
+
+List, inspect, and manage themes.
+
+```
+pretty-pdf theme list
+pretty-pdf theme show <name>
+pretty-pdf theme new <name> [flags]
+pretty-pdf theme add <path> [flags]
+```
+
+#### `theme list`
+
+Prints every builtin theme (name + description) followed by any custom
+themes discovered in `./themes/` (project) and the global themes directory
+(`~/.config/pretty-pdf/themes` on Linux, via `os.UserConfigDir()`).
+
+#### `theme show <name>`
+
+Resolves a theme (builtin, custom, or a `.theme.yml`/`.css` path) with no
+customization and prints its final, fully-assembled CSS to stdout — useful
+to inspect a theme or pipe it somewhere (`pretty-pdf theme show dark > dark.css`).
+
+#### `theme new <name>`
+
+Scaffolds a starter `<name>.theme.yml` you can hand-edit.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--from` | `"default"` | Builtin theme to base the scaffold on |
+| `--global` | `false` | Write to the global themes directory instead of `./themes` |
+
+Refuses to overwrite an existing file.
+
+#### `theme add <path>`
+
+Imports an existing `.theme.yml` or raw `.css` file as a managed custom
+theme (a loose `.css` file is wrapped into a minimal `.theme.yml` with
+`extends: default` and the file's content as its `css:` block).
+
+| Flag | Default | Description |
+|---|---|---|
+| `--as` | `""` | Name to register the imported theme under (default: derived from the file name) |
+| `--global` | `false` | Copy to the global themes directory instead of `./themes` |
 
 ---
 
@@ -173,12 +234,27 @@ subtitle: "A journey into MDX-powered PDFs"
 author: "Jane Doe"
 source: book
 output: out.pdf
-theme: default
+theme: corporate
 css: custom.css
 template: custom.html
 vars:
   version: "1.0"
   year: "2026"
+
+theme_options:
+  colors:
+    primary: "#1a56db"
+    accent: "#0ea5e9"
+  fonts:
+    heading: "Georgia, serif"
+    google_fonts: ["Inter:400,600"]   # only fetched with allow_network_fonts: true
+  sections:
+    cover: true
+    toc: true
+    page_numbers: true
+    header: true
+  density: normal        # compact | normal | relaxed
+  allow_network_fonts: false
 
 lint:
   require_frontmatter:
@@ -206,10 +282,11 @@ render:
 | `author` | `"go-pretty-pdf"` | Book author |
 | `source` | `"book"` | Source MDX directory |
 | `output` | `"out.pdf"` | Output PDF path |
-| `theme` | `"default"` | Visual theme (`default`, `minimal`) |
-| `css` | `""` | Path to custom CSS file |
-| `template` | `""` | Path to custom HTML template file |
+| `theme` | `""` | Theme name (builtin, custom, or a `.theme.yml`/`.css` path) — see [Themes](#themes) |
+| `css` | `""` | Path to custom CSS file (overrides the theme entirely) |
+| `template` | `""` | Path to custom HTML template file (overrides the theme's HTML) |
 | `vars` | `{}` | Template variables for `{{key}}` substitution |
+| `theme_options` | `{}` | Theme customization — see [Themes](#themes) |
 
 ### `lint` fields
 
@@ -235,14 +312,89 @@ render:
 
 ## Themes
 
-Two built-in themes are available:
+Eight built-in themes are available, each a palette/typography layer over a
+shared structural stylesheet (`theme/assets/base.css`):
 
-| Theme | Description |
+| Theme | Category | Description |
+|---|---|---|
+| `default` | professional | Clean, professional look that fits any technical document. |
+| `minimal` | minimal | Stripped down: smaller type, no borders, maximum simplicity. |
+| `modern` | professional | Sans-serif with generous whitespace and bold accent underlines. |
+| `classic` | editorial | Serif, traditional book layout — ink on paper. |
+| `corporate` | professional | Structured blue/gray palette for client-facing reports. |
+| `dark` | dark | Dark background with light text. Best for on-screen PDFs. |
+| `academic` | academic | Formal serif layout for theses, papers, and reports. |
+| `editorial` | editorial | Magazine-style display headings and pull-quote blockquotes. |
+
+Run `pretty-pdf theme list` to see this list plus any custom themes, and
+`pretty-pdf theme show <name>` to print a theme's final resolved CSS.
+
+### Customizing a theme without writing CSS
+
+`theme_options` (config) or the matching `--color-*`/`--font-*`/`--density`/
+`--no-*` flags (CLI) customize any theme — builtin or custom — without
+touching CSS:
+
+```bash
+pretty-pdf build --theme corporate \
+  --color-primary "#0ea5e9" --font-heading "Georgia, serif" \
+  --no-cover --no-page-numbers --density compact
+```
+
+| `theme_options` field | Description |
 |---|---|
-| `default` | Clean, professional look. Uses the embedded `print.css` (291 lines) and `template.html` from `compose/assets/`. Full-featured with page numbers, TOC styling, cover page, card components. |
-| `minimal` | Stripped down, no extras. Simpler CSS embedded in Go source. Smaller fonts, minimal borders, no page numbers. |
+| `colors.primary/accent/text/muted/background` | CSS custom properties for the theme's palette |
+| `fonts.heading/body/code` | Font-family overrides (system-safe stacks recommended) |
+| `fonts.google_fonts` | Google Fonts family names (e.g. `["Inter:400,600"]`) — only fetched when `allow_network_fonts: true`, since network access is otherwise blocked during rendering |
+| `sections.cover/toc/page_numbers/header` | `true`/`false`/unset (unset = theme's own default) |
+| `density` | `compact`, `normal`, or `relaxed` — adjusts line-height and a handful of spacing rules |
+| `allow_network_fonts` | Enables outbound network access during rendering so `fonts.google_fonts` can be fetched |
 
-Custom themes can be created by providing `css` and/or `template` paths in config or via `--css`/`--template` CLI flags.
+Section toggles set via `--no-cover`/`--no-toc`/`--no-page-numbers`/
+`--no-header` only apply to the default HTML template; a custom `--template`
+owns its own HTML and must implement any toggles itself (the default
+template gates its cover block on `{{if .ShowCover}}`).
+
+### Custom themes
+
+A custom theme is a `<name>.theme.yml` file that extends a builtin theme:
+
+```yaml
+name: my-report
+description: "Client report with a teal accent"
+extends: corporate
+
+colors:
+  accent: "#0d9488"
+fonts:
+  heading: "Georgia, serif"
+sections:
+  page_numbers: false
+density: normal
+
+css: |
+  /* raw CSS appended last — wins over everything above */
+  .cover h1 { text-transform: uppercase; }
+```
+
+Custom themes are discovered by name in `./themes/` (project-local, checked
+first) and then in the global themes directory
+(`~/.config/pretty-pdf/themes` on Linux). Use them the same way as a
+builtin: `--theme my-report` or `theme: my-report` in config.
+
+Manage them with:
+
+```bash
+pretty-pdf theme new my-report --from corporate   # scaffold ./themes/my-report.theme.yml
+pretty-pdf theme add ./some-theme.theme.yml        # import an existing theme file
+pretty-pdf theme add ./some.css --as my-report     # or wrap a plain CSS file
+pretty-pdf theme list                              # see builtins + everything discovered
+pretty-pdf theme show my-report                    # print the fully resolved CSS
+```
+
+A `--theme` value ending in `.theme.yml`/`.css` is treated as a direct file
+path instead of a name, so you can also point straight at a file without
+installing it into a themes directory.
 
 ## Template Variables
 

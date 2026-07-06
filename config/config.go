@@ -15,17 +15,51 @@ const (
 )
 
 type Config struct {
-	Title    string            `yaml:"title"`
-	Subtitle string            `yaml:"subtitle"`
-	Author   string            `yaml:"author"`
-	Source   string            `yaml:"source"`
-	Output   string            `yaml:"output"`
-	Theme    string            `yaml:"theme"`
-	CSS      string            `yaml:"css"`
-	Template string            `yaml:"template"`
-	Vars     map[string]string `yaml:"vars"`
-	Lint     LintConfig        `yaml:"lint"`
-	Render   RenderConfig      `yaml:"render"`
+	Title        string             `yaml:"title"`
+	Subtitle     string             `yaml:"subtitle"`
+	Author       string             `yaml:"author"`
+	Source       string             `yaml:"source"`
+	Output       string             `yaml:"output"`
+	Theme        string             `yaml:"theme"`
+	CSS          string             `yaml:"css"`
+	Template     string             `yaml:"template"`
+	Vars         map[string]string  `yaml:"vars"`
+	Lint         LintConfig         `yaml:"lint"`
+	Render       RenderConfig       `yaml:"render"`
+	ThemeOptions ThemeOptionsConfig `yaml:"theme_options"`
+}
+
+// ThemeOptionsConfig customizes the theme selected via Theme: colors,
+// fonts, section toggles (cover/TOC/page numbers/header), density, and
+// whether network-fetched Google Fonts are allowed.
+type ThemeOptionsConfig struct {
+	Colors            ColorsConfig   `yaml:"colors"`
+	Fonts             FontsConfig    `yaml:"fonts"`
+	Sections          SectionsConfig `yaml:"sections"`
+	Density           string         `yaml:"density"`
+	AllowNetworkFonts bool           `yaml:"allow_network_fonts"`
+}
+
+type ColorsConfig struct {
+	Primary    string `yaml:"primary"`
+	Accent     string `yaml:"accent"`
+	Text       string `yaml:"text"`
+	Muted      string `yaml:"muted"`
+	Background string `yaml:"background"`
+}
+
+type FontsConfig struct {
+	Heading     string   `yaml:"heading"`
+	Body        string   `yaml:"body"`
+	Code        string   `yaml:"code"`
+	GoogleFonts []string `yaml:"google_fonts"`
+}
+
+type SectionsConfig struct {
+	Cover       *bool `yaml:"cover"`
+	TOC         *bool `yaml:"toc"`
+	PageNumbers *bool `yaml:"page_numbers"`
+	Header      *bool `yaml:"header"`
 }
 
 type LintConfig struct {

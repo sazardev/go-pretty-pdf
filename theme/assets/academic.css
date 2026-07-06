@@ -1,0 +1,53 @@
+/* academic — formal serif layout for theses, papers, and reports. */
+
+:root {
+  --pdf-primary: #14171a;
+  --pdf-accent: #3b5b8c;
+  --pdf-text: #14171a;
+  --pdf-muted: #5f6368;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f4f4f2;
+  --pdf-surface-2: #eeeeec;
+  --pdf-border: #cccccc;
+  --pdf-info: #3b5b8c;
+  --pdf-warn: #8a5a2b;
+  --pdf-success: #3f6b3f;
+  --pdf-font-heading: 'Times New Roman', 'Liberation Serif', Georgia, serif;
+  --pdf-font-body: 'Times New Roman', 'Liberation Serif', Georgia, serif;
+  --pdf-font-code: 'Courier New', Consolas, monospace;
+  --pdf-line-height: 1.7;
+}
+
+body {
+  text-align: justify;
+}
+
+h1, h2, h3, h4, h5 {
+  font-weight: 700;
+  text-align: left;
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover h1 {
+  font-size: 22pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cover-subtitle {
+  max-width: 100%;
+  text-align: center;
+  font-style: italic;
+}
+
+blockquote {
+  font-size: 9.5pt;
+  font-style: italic;
+  color: var(--pdf-muted, #5f6368);
+}

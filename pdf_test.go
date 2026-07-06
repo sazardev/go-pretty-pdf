@@ -113,21 +113,70 @@ func TestOptionsMutateFields(t *testing.T) {
 }
 
 func TestWithThemeAndConflict(t *testing.T) {
-	p, err := New(WithTheme(theme.Minimal))
+	minimal, ok := theme.Get("minimal")
+	if !ok {
+		t.Fatal("expected builtin theme 'minimal' to be registered")
+	}
+
+	p, err := New(WithTheme(minimal))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if p.composeOpts.CSS != theme.Minimal.CSS {
+	if p.composeOpts.CSS != minimal.CSS {
 		t.Error("expected WithTheme to set composeOpts.CSS to the theme's CSS")
 	}
 
 	// Last CSS-setting option wins.
-	p2, err := New(WithTheme(theme.Minimal), WithCSS("custom"))
+	p2, err := New(WithTheme(minimal), WithCSS("custom"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if p2.composeOpts.CSS != "custom" {
 		t.Error("expected the later WithCSS to override the earlier WithTheme")
+	}
+}
+
+func TestWithThemeName(t *testing.T) {
+	p, err := New(WithThemeName("minimal", theme.Options{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(p.composeOpts.CSS, "minimal") {
+		t.Errorf("expected resolved CSS to include the minimal theme's marker comment, got: %.100s...", p.composeOpts.CSS)
+	}
+	if !p.composeOpts.ShowCover || !p.composeOpts.ShowTOC {
+		t.Error("expected minimal theme to default all sections on")
+	}
+	if !p.renderOpts.PageNumbers || !p.renderOpts.ShowHeader {
+		t.Error("expected minimal theme to default page numbers/header on")
+	}
+
+	p2, err := New(WithThemeName("corporate", theme.Options{
+		Sections: theme.Sections{Cover: theme.BoolPtr(false), PageNumbers: theme.BoolPtr(false)},
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p2.composeOpts.ShowCover {
+		t.Error("expected --no-cover equivalent to disable ShowCover")
+	}
+	if p2.renderOpts.PageNumbers {
+		t.Error("expected page numbers to be disabled")
+	}
+	if !p2.composeOpts.ShowTOC || !p2.renderOpts.ShowHeader {
+		t.Error("expected untouched sections to stay enabled")
+	}
+}
+
+func TestWithThemeNameUnknownWarns(t *testing.T) {
+	out := captureStderr(t, func() {
+		_, err := New(WithVerbose(true), WithThemeName("does-not-exist", theme.Options{}))
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+	if !strings.Contains(out, "does-not-exist") {
+		t.Errorf("expected warning about unknown theme, got: %q", out)
 	}
 }
 

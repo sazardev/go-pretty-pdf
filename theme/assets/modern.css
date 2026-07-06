@@ -1,0 +1,46 @@
+/* modern — sans-serif, generous whitespace, bold accent underlines. */
+
+:root {
+  --pdf-primary: #0f172a;
+  --pdf-accent: #6366f1;
+  --pdf-text: #0f172a;
+  --pdf-muted: #64748b;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f8fafc;
+  --pdf-surface-2: #f1f5f9;
+  --pdf-border: #e2e8f0;
+  --pdf-info: #6366f1;
+  --pdf-warn: #f59e0b;
+  --pdf-success: #22c55e;
+  --pdf-font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --pdf-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --pdf-font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --pdf-line-height: 1.7;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  padding-bottom: 10pt;
+  border-bottom: 3px solid var(--pdf-accent, #6366f1);
+}
+
+h2 {
+  border-bottom: 1px solid var(--pdf-border, #e2e8f0);
+  padding-bottom: 6pt;
+}
+
+pre, table, .component-deep-dive, .component-warning, .component-axiom {
+  border-radius: 8px;
+}
+
+.cover {
+  border-left: 6px solid var(--pdf-accent, #6366f1);
+  padding-left: 24pt;
+}
+
+.cover h1 {
+  letter-spacing: -0.02em;
+}

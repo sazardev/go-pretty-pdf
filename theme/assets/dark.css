@@ -1,0 +1,42 @@
+/* dark — dark background, light text. Best for on-screen PDFs. */
+
+:root {
+  --pdf-primary: #f5f5f5;
+  --pdf-accent: #7aa2ff;
+  --pdf-text: #e6e6e6;
+  --pdf-muted: #a0a0a0;
+  --pdf-bg: #121212;
+  --pdf-surface: #1e1e1e;
+  --pdf-surface-2: #1a1a1a;
+  --pdf-border: #333333;
+  --pdf-info: #7aa2ff;
+  --pdf-warn: #ffb454;
+  --pdf-success: #6bcf6b;
+  --pdf-font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --pdf-font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pdf-font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--pdf-primary, #f5f5f5);
+}
+
+a {
+  text-decoration: underline;
+}
+
+th {
+  color: var(--pdf-primary, #f5f5f5);
+}
+
+.toc a {
+  color: var(--pdf-text, #e6e6e6);
+}
+
+.toc a:hover {
+  color: var(--pdf-accent, #7aa2ff);
+}
+
+.metadata {
+  color: var(--pdf-muted, #a0a0a0);
+}

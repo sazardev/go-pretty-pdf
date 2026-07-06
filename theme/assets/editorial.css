@@ -1,0 +1,48 @@
+/* editorial — magazine-style display headings and pull-quote blockquotes. */
+
+:root {
+  --pdf-primary: #1a1a1a;
+  --pdf-accent: #d1495b;
+  --pdf-text: #1a1a1a;
+  --pdf-muted: #767676;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f7f7f7;
+  --pdf-surface-2: #f1f1f1;
+  --pdf-border: #e3e3e3;
+  --pdf-info: #d1495b;
+  --pdf-warn: #d9822b;
+  --pdf-success: #3f9142;
+  --pdf-font-heading: 'Georgia', 'Iowan Old Style', serif;
+  --pdf-font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --pdf-font-code: 'JetBrains Mono', Consolas, monospace;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 16pt;
+  font-weight: 800;
+  color: var(--pdf-accent, #d1495b);
+}
+
+.cover {
+  align-items: flex-start;
+  border-left: 10px solid var(--pdf-accent, #d1495b);
+  padding-left: 28pt;
+}
+
+.cover h1 {
+  font-size: 34pt;
+  font-weight: 800;
+}
+
+blockquote {
+  border-left: 4px solid var(--pdf-accent, #d1495b);
+  font-size: 12pt;
+  font-style: italic;
+  color: var(--pdf-text, #1a1a1a);
+}

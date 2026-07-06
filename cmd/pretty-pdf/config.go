@@ -85,6 +85,49 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 		cfg.Render.Timeout = timeoutStr
 	}
 
+	if cmd.Flags().Changed("no-cover") {
+		cfg.ThemeOptions.Sections.Cover = boolPtr(!noCover)
+	}
+	if cmd.Flags().Changed("no-toc") {
+		cfg.ThemeOptions.Sections.TOC = boolPtr(!noTOC)
+	}
+	if cmd.Flags().Changed("no-page-numbers") {
+		cfg.ThemeOptions.Sections.PageNumbers = boolPtr(!noPageNumbers)
+	}
+	if cmd.Flags().Changed("no-header") {
+		cfg.ThemeOptions.Sections.Header = boolPtr(!noHeader)
+	}
+	if cmd.Flags().Changed("color-primary") {
+		cfg.ThemeOptions.Colors.Primary = colorPrimary
+	}
+	if cmd.Flags().Changed("color-accent") {
+		cfg.ThemeOptions.Colors.Accent = colorAccent
+	}
+	if cmd.Flags().Changed("color-text") {
+		cfg.ThemeOptions.Colors.Text = colorText
+	}
+	if cmd.Flags().Changed("color-muted") {
+		cfg.ThemeOptions.Colors.Muted = colorMuted
+	}
+	if cmd.Flags().Changed("color-bg") {
+		cfg.ThemeOptions.Colors.Background = colorBg
+	}
+	if cmd.Flags().Changed("font-heading") {
+		cfg.ThemeOptions.Fonts.Heading = fontHeading
+	}
+	if cmd.Flags().Changed("font-body") {
+		cfg.ThemeOptions.Fonts.Body = fontBody
+	}
+	if cmd.Flags().Changed("font-code") {
+		cfg.ThemeOptions.Fonts.Code = fontCode
+	}
+	if cmd.Flags().Changed("density") {
+		cfg.ThemeOptions.Density = density
+	}
+	if cmd.Flags().Changed("allow-network-fonts") {
+		cfg.ThemeOptions.AllowNetworkFonts = allowNetworkFonts
+	}
+
 	if verbose {
 		if cfg.CSS != "" {
 			if _, err := os.Stat(cfg.CSS); err != nil {
@@ -105,9 +148,12 @@ func buildOpts(cfg *config.Config) []prettypdf.Option {
 	return []prettypdf.Option{
 		prettypdf.WithVerbose(verbose),
 		prettypdf.WithFullConfig(cfg),
+		prettypdf.WithNetworkAccess(cfg.ThemeOptions.AllowNetworkFonts),
 		prettypdf.WithValidator(validatorFromConfig(cfg)),
 	}
 }
+
+func boolPtr(b bool) *bool { return &b }
 
 func validatorFromConfig(cfg *config.Config) *mdx.DefaultValidator {
 	v := mdx.NewDefaultValidator()

@@ -1,0 +1,70 @@
+/* minimal — stripped down, smaller type, no borders, maximum simplicity. */
+
+:root {
+  --pdf-primary: #222222;
+  --pdf-accent: #4a6cf7;
+  --pdf-text: #222222;
+  --pdf-muted: #666666;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #fafafa;
+  --pdf-surface-2: #f4f4f4;
+  --pdf-border: #dddddd;
+  --pdf-info: #4a6cf7;
+  --pdf-warn: #f7a84a;
+  --pdf-success: #4caf50;
+  --pdf-font-heading: system-ui, sans-serif;
+  --pdf-font-body: system-ui, sans-serif;
+  --pdf-font-code: monospace;
+}
+
+body {
+  font-size: 10pt;
+}
+
+h1 { font-size: 16pt; }
+h2 { font-size: 13pt; }
+h3 { font-size: 11pt; }
+h4 { font-size: 10.5pt; }
+h5 { font-size: 10pt; }
+
+pre {
+  border: none;
+  padding: 8px 10px;
+  font-size: 8.5pt;
+}
+
+code {
+  font-size: 9pt;
+}
+
+table {
+  font-size: 9pt;
+}
+
+th, td {
+  padding: 4px 8px;
+}
+
+.component-deep-dive,
+.component-warning,
+.component-axiom {
+  border-radius: 0;
+  padding: 8px 12px;
+}
+
+.cover {
+  min-height: 70vh;
+}
+
+.cover h1 {
+  font-size: 24pt;
+  page-break-before: avoid;
+}
+
+.cover-subtitle {
+  font-size: 11pt;
+}
+
+.toc h1 {
+  font-size: 18pt;
+}

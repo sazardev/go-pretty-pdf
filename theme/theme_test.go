@@ -1,0 +1,130 @@
+package theme
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestGetAndList(t *testing.T) {
+	want := []string{"default", "minimal", "modern", "classic", "corporate", "dark", "academic", "editorial"}
+	list := List()
+	if len(list) != len(want) {
+		t.Fatalf("expected %d builtin themes, got %d", len(want), len(list))
+	}
+	for i, name := range want {
+		if list[i].Name != name {
+			t.Errorf("List()[%d].Name = %q, want %q", i, list[i].Name, name)
+		}
+		if list[i].CSS == "" {
+			t.Errorf("theme %q has empty CSS", name)
+		}
+	}
+
+	if _, ok := Get("does-not-exist"); ok {
+		t.Error("expected Get to report false for an unknown theme")
+	}
+	if t2, ok := Get("dark"); !ok || t2.Name != "dark" {
+		t.Errorf("expected Get(\"dark\") to return the dark theme, got %+v, %v", t2, ok)
+	}
+}
+
+func TestResolveIncludesBaseAndThemeCSS(t *testing.T) {
+	th, ok := Get("corporate")
+	if !ok {
+		t.Fatal("expected corporate theme to be registered")
+	}
+
+	css, sections, err := Resolve(th, Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(css, "Variable contract") {
+		t.Error("expected resolved CSS to include the shared base stylesheet")
+	}
+	if !strings.Contains(css, "corporate") {
+		t.Error("expected resolved CSS to include the theme's own CSS")
+	}
+	if !sections.Cover || !sections.TOC || !sections.PageNumbers || !sections.Header {
+		t.Errorf("expected all sections on by default, got %+v", sections)
+	}
+}
+
+func TestResolveColorAndFontOverrides(t *testing.T) {
+	th, _ := Get("default")
+
+	css, _, err := Resolve(th, Options{
+		Colors: Colors{Primary: "#ff0000", Accent: "#00ff00"},
+		Fonts:  Fonts{Heading: "Comic Sans MS"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(css, "--pdf-primary: #ff0000;") {
+		t.Error("expected override root block to set --pdf-primary")
+	}
+	if !strings.Contains(css, "--pdf-accent: #00ff00;") {
+		t.Error("expected override root block to set --pdf-accent")
+	}
+	if !strings.Contains(css, "--pdf-font-heading: Comic Sans MS;") {
+		t.Error("expected override root block to set --pdf-font-heading")
+	}
+}
+
+func TestResolveSectionToggles(t *testing.T) {
+	th, _ := Get("default")
+
+	css, sections, err := Resolve(th, Options{
+		Sections: Sections{Cover: BoolPtr(false), Header: BoolPtr(false)},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sections.Cover {
+		t.Error("expected Cover to be disabled")
+	}
+	if sections.TOC != true {
+		t.Error("expected TOC to remain at its default (true)")
+	}
+	if sections.Header {
+		t.Error("expected Header to be disabled")
+	}
+	if !strings.Contains(css, `.cover{display:none !important;}`) {
+		t.Error("expected CSS to hide the cover when disabled")
+	}
+	if strings.Contains(css, `.toc{display:none !important;}`) {
+		t.Error("did not expect CSS to hide the TOC")
+	}
+}
+
+func TestResolveInvalidDensity(t *testing.T) {
+	th, _ := Get("default")
+	if _, _, err := Resolve(th, Options{Density: "extreme"}); err == nil {
+		t.Error("expected an error for an unknown density value")
+	}
+}
+
+func TestResolveGoogleFontsImportOnlyWhenAllowed(t *testing.T) {
+	th, _ := Get("default")
+
+	css, _, err := Resolve(th, Options{
+		Fonts:             Fonts{GoogleImports: []string{"Inter:400,600"}},
+		AllowNetworkFonts: false,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(css, "fonts.googleapis.com") {
+		t.Error("did not expect a Google Fonts @import without AllowNetworkFonts")
+	}
+
+	css, _, err = Resolve(th, Options{
+		Fonts:             Fonts{GoogleImports: []string{"Inter:400,600"}},
+		AllowNetworkFonts: true,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(css, "@import url('https://fonts.googleapis.com/css?family=Inter:400,600&display=swap');") {
+		t.Errorf("expected a Google Fonts @import, got: %.200s", css)
+	}
+}
