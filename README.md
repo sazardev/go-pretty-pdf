@@ -223,11 +223,11 @@ errs, _ := pdf.Validate(ctx)
 
 ## Themes
 
-Eight built-in themes, each a palette/typography layer over one shared
+Sixteen built-in themes, each a palette/typography layer over one shared
 structural stylesheet — clean and professional by default, easy to
 customize without writing CSS, and extendable with your own custom themes:
 
-`default` &middot; `minimal` &middot; `modern` &middot; `classic` &middot; `corporate` &middot; `dark` &middot; `academic` &middot; `editorial`
+`default` &middot; `minimal` &middot; `modern` &middot; `classic` &middot; `corporate` &middot; `dark` &middot; `academic` &middot; `editorial` &middot; `sepia` &middot; `terminal` &middot; `blueprint` &middot; `ivy` &middot; `government` &middot; `resume` &middot; `legal` &middot; `latex`
 
 ```bash
 # Pick a theme, tweak colors/fonts/density, drop sections you don't want

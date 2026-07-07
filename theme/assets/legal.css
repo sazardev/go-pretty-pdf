@@ -1,0 +1,45 @@
+/* legal — stark, formal brief style: black ink, no color as decoration,
+   hanging citations. */
+
+:root {
+  --pdf-primary: #000000;
+  --pdf-accent: #2b3a67;
+  --pdf-text: #111111;
+  --pdf-muted: #555555;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f5f5f5;
+  --pdf-surface-2: #eeeeee;
+  --pdf-border: #bbbbbb;
+  --pdf-info: #2b3a67;
+  --pdf-warn: #7a5c00;
+  --pdf-success: #2f5233;
+  --pdf-font-heading: 'Times New Roman', 'Liberation Serif', serif;
+  --pdf-font-body: 'Times New Roman', 'Liberation Serif', serif;
+  --pdf-font-code: 'Courier New', monospace;
+  --pdf-line-height: 1.8;
+}
+
+body {
+  text-align: justify;
+}
+
+h1 {
+  border-bottom: 3px double var(--pdf-primary, #000000);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+blockquote {
+  border-left: 2px solid var(--pdf-border, #bbbbbb);
+  padding-left: 20px;
+  font-style: normal;
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+}
+
+.cover h1 {
+  border-bottom: none;
+}

@@ -4,7 +4,8 @@ Thanks for your interest in contributing!
 
 ## Development setup
 
-Requires Go 1.26+ and Chrome/Chromium installed.
+Requires Go 1.26+. Chrome/Chromium is optional — `pretty-pdf` auto-downloads
+a headless build if none is found (see `chromemgr`).
 
 ```bash
 git clone https://github.com/sazardev/go-pretty-pdf.git
@@ -33,6 +34,28 @@ Requires [golangci-lint](https://golangci-lint.run/usage/install/).
 make build         # dev build to bin/
 make build-release # stripped build
 ```
+
+## Adding a builtin theme
+
+Adding a theme to the CLI/library requires exactly one file and one
+registry entry — nothing else to keep in sync:
+
+1. Create `theme/assets/<name>.css`. Set the `--pdf-*` custom properties
+   (see the contract documented at the top of `theme/assets/base.css`) plus
+   any structural CSS deltas (e.g. a bordered `.cover`).
+2. In `theme/builtin.go`: add a `//go:embed` var, a `Name<Foo>` constant, an
+   entry in the `registry` map (set `Accented: true` if the theme uses its
+   accent color as a bold structural element — a cover border, an
+   accent-colored blockquote — rather than just for links), and append the
+   constant to `order`.
+3. Run `go test ./theme/... ./scripts/docsgen/...`.
+
+That's it. The docs website (`scripts/docsgen`) reads colors, fonts, and
+the accent treatment straight out of `theme.List()` and each theme's own
+CSS at build time — the theme switcher, its swatch colors, and a
+downloadable "docs as a PDF" rendered in that theme all appear
+automatically on the next `go run ./scripts/docsgen`. There is no
+site-side file to hand-edit or duplicate a palette into.
 
 ## Code conventions
 

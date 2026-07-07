@@ -1,0 +1,39 @@
+/* terminal — all-monospace, terminal-inspired look for technical references. */
+
+:root {
+  --pdf-primary: #0a0a0a;
+  --pdf-accent: #158443;
+  --pdf-text: #0a0a0a;
+  --pdf-muted: #5f6368;
+  --pdf-bg: #f7f7f5;
+  --pdf-surface: #eef0ec;
+  --pdf-surface-2: #e6e9e2;
+  --pdf-border: #cfd4c8;
+  --pdf-info: #1a56db;
+  --pdf-warn: #b45309;
+  --pdf-success: #158443;
+  --pdf-font-heading: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --pdf-font-body: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --pdf-font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+h1, h2 {
+  border-bottom: 1px dashed var(--pdf-border, #cfd4c8);
+  padding-bottom: 6pt;
+}
+
+.cover {
+  border: 1px solid var(--pdf-border, #cfd4c8);
+  padding: 24pt;
+}
+
+.cover h1::before {
+  content: "$ ";
+  color: var(--pdf-accent, #158443);
+  font-weight: 400;
+}
+
+.toc-h1::before {
+  content: "> ";
+  color: var(--pdf-accent, #158443);
+}

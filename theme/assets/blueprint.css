@@ -1,0 +1,51 @@
+/* blueprint — dark technical blueprint palette with monospace type and cyan highlights. */
+
+:root {
+  --pdf-primary: #eaf4fb;
+  --pdf-accent: #5fd4d6;
+  --pdf-text: #d7e6f0;
+  --pdf-muted: #7f9fb8;
+  --pdf-bg: #0a2647;
+  --pdf-surface: #123a63;
+  --pdf-surface-2: #163f6c;
+  --pdf-border: #2c5c8a;
+  --pdf-info: #5fd4d6;
+  --pdf-warn: #f0a868;
+  --pdf-success: #7ee0a8;
+  --pdf-font-heading: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --pdf-font-body: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --pdf-font-code: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--pdf-primary, #eaf4fb);
+}
+
+h1 {
+  border-bottom: 2px dotted var(--pdf-accent, #5fd4d6);
+}
+
+a {
+  text-decoration: underline;
+}
+
+.cover {
+  border: 2px dashed var(--pdf-accent, #5fd4d6);
+  padding: 24pt;
+}
+
+th {
+  color: var(--pdf-primary, #eaf4fb);
+}
+
+.toc a {
+  color: var(--pdf-text, #d7e6f0);
+}
+
+.toc a:hover {
+  color: var(--pdf-accent, #5fd4d6);
+}
+
+.metadata {
+  color: var(--pdf-muted, #7f9fb8);
+}

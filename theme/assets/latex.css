@@ -1,0 +1,54 @@
+/* latex — classic mathematical/scientific paper look: serif body, blue
+   links, automatic section numbering (like article-class LaTeX output). */
+
+:root {
+  --pdf-primary: #000000;
+  --pdf-accent: #2757b0;
+  --pdf-text: #000000;
+  --pdf-muted: #444444;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f2f2f2;
+  --pdf-surface-2: #ececec;
+  --pdf-border: #cccccc;
+  --pdf-info: #2757b0;
+  --pdf-warn: #915f00;
+  --pdf-success: #1a6b3c;
+  --pdf-font-heading: 'Latin Modern Roman', 'CMU Serif', Georgia, 'Times New Roman', serif;
+  --pdf-font-body: 'Latin Modern Roman', 'CMU Serif', Georgia, 'Times New Roman', serif;
+  --pdf-font-code: 'Latin Modern Mono', 'CMU Typewriter Text', 'Courier New', monospace;
+  --pdf-line-height: 1.5;
+}
+
+body {
+  text-align: justify;
+}
+
+h1 {
+  counter-reset: pdf-h2;
+}
+
+h2 {
+  counter-increment: pdf-h2;
+  counter-reset: pdf-h3;
+}
+
+h2::before {
+  content: counter(pdf-h2) ". ";
+}
+
+h3 {
+  counter-increment: pdf-h3;
+}
+
+h3::before {
+  content: counter(pdf-h2) "." counter(pdf-h3) " ";
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+}
+
+.cover h1 {
+  font-style: normal;
+}

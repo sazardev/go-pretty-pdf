@@ -1,0 +1,37 @@
+/* resume — clean, ATS-friendly sans-serif for CVs and one-pagers. No cover,
+   no TOC, no page numbers, no running header: just the content. */
+
+:root {
+  --pdf-primary: #1f2937;
+  --pdf-accent: #0d9488;
+  --pdf-text: #1f2937;
+  --pdf-muted: #6b7280;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f9fafb;
+  --pdf-surface-2: #f3f4f6;
+  --pdf-border: #e5e7eb;
+  --pdf-info: #0d9488;
+  --pdf-warn: #d97706;
+  --pdf-success: #059669;
+  --pdf-font-heading: 'Helvetica Neue', Arial, sans-serif;
+  --pdf-font-body: 'Helvetica Neue', Arial, sans-serif;
+  --pdf-font-code: Consolas, monospace;
+  --pdf-line-height: 1.5;
+}
+
+h1 {
+  font-size: 22pt;
+  border-bottom: 2px solid var(--pdf-accent, #0d9488);
+  padding-bottom: 6pt;
+}
+
+h2 {
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 11pt;
+  color: var(--pdf-accent, #0d9488);
+}
+
+ul, ol {
+  padding-left: 16px;
+}

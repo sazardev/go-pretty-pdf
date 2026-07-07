@@ -28,161 +28,13 @@
 }
 
 /* ---------------------------------------------------------------------
- * Theme palettes — identical to theme/assets/*.css
+ * Theme palettes: generated at build time by scripts/docsgen from
+ * theme.List() (see themevars.go) — every --site-* color/font variable
+ * here is parsed straight out of the same CSS the CLI actually ships in
+ * its PDFs, appended into <style> after this file. Adding a builtin theme
+ * to theme/builtin.go is enough to make it appear here; there is nothing
+ * to hand-copy or keep in sync in this file.
  * ------------------------------------------------------------------- */
-
-:root,
-[data-site-theme="classic"] {
-  --site-primary:  #1c1c1c;
-  --site-accent:   #7a4a2b;
-  --site-text:     #1c1c1c;
-  --site-muted:    #5a5a5a;
-  --site-bg:       #fffdf8;
-  --site-surface:  #f7f3ea;
-  --site-surface-2:#f2ede1;
-  --site-border:   #d8cfba;
-  --site-info:     #4a5d7a;
-  --site-warn:     #8a5a2b;
-  --site-success:  #3f6b3f;
-  --site-font-heading: 'Georgia', 'Iowan Old Style', 'Palatino', serif;
-  --site-font-body:    'Georgia', 'Palatino', 'Times New Roman', serif;
-  --site-font-code:    'Courier New', Consolas, monospace;
-  --site-line-height: 1.65;
-  --site-flourish: var(--site-accent);
-}
-
-[data-site-theme="default"] {
-  --site-primary:  #1a1a1a;
-  --site-accent:   #4a6cf7;
-  --site-text:     #1a1a1a;
-  --site-muted:    #666666;
-  --site-bg:       #ffffff;
-  --site-surface:  #f5f5f5;
-  --site-surface-2:#fafafa;
-  --site-border:   #dddddd;
-  --site-info:     #4a6cf7;
-  --site-warn:     #f7a84a;
-  --site-success:  #4caf50;
-  --site-font-heading: 'Inter', 'General Sans', system-ui, -apple-system, sans-serif;
-  --site-font-body:    system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --site-font-code:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --site-line-height: 1.6;
-  --site-flourish: var(--site-text);
-}
-
-[data-site-theme="minimal"] {
-  --site-primary:  #222222;
-  --site-accent:   #4a6cf7;
-  --site-text:     #222222;
-  --site-muted:    #666666;
-  --site-bg:       #ffffff;
-  --site-surface:  #fafafa;
-  --site-surface-2:#f4f4f4;
-  --site-border:   #dddddd;
-  --site-info:     #4a6cf7;
-  --site-warn:     #f7a84a;
-  --site-success:  #4caf50;
-  --site-font-heading: system-ui, sans-serif;
-  --site-font-body:    system-ui, sans-serif;
-  --site-font-code:    monospace;
-  --site-line-height: 1.6;
-  --site-flourish: var(--site-text);
-}
-
-[data-site-theme="modern"] {
-  --site-primary:  #0f172a;
-  --site-accent:   #6366f1;
-  --site-text:     #0f172a;
-  --site-muted:    #64748b;
-  --site-bg:       #ffffff;
-  --site-surface:  #f8fafc;
-  --site-surface-2:#f1f5f9;
-  --site-border:   #e2e8f0;
-  --site-info:     #6366f1;
-  --site-warn:     #f59e0b;
-  --site-success:  #22c55e;
-  --site-font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-  --site-font-body:    'Inter', system-ui, -apple-system, sans-serif;
-  --site-font-code:    'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  --site-line-height: 1.7;
-  --site-flourish: var(--site-accent);
-}
-
-[data-site-theme="corporate"] {
-  --site-primary:  #0b2545;
-  --site-accent:   #1a56db;
-  --site-text:     #1f2937;
-  --site-muted:    #6b7280;
-  --site-bg:       #ffffff;
-  --site-surface:  #f3f6fb;
-  --site-surface-2:#eef2f8;
-  --site-border:   #d3dce6;
-  --site-info:     #1a56db;
-  --site-warn:     #b45309;
-  --site-success:  #15803d;
-  --site-font-heading: 'Inter', 'Segoe UI', Arial, sans-serif;
-  --site-font-body:    'Inter', 'Segoe UI', Arial, sans-serif;
-  --site-font-code:    'Consolas', 'JetBrains Mono', monospace;
-  --site-line-height: 1.6;
-  --site-flourish: var(--site-accent);
-}
-
-[data-site-theme="dark"] {
-  --site-primary:  #f5f5f5;
-  --site-accent:   #7aa2ff;
-  --site-text:     #e6e6e6;
-  --site-muted:    #a0a0a0;
-  --site-bg:       #121212;
-  --site-surface:  #1e1e1e;
-  --site-surface-2:#1a1a1a;
-  --site-border:   #333333;
-  --site-info:     #7aa2ff;
-  --site-warn:     #ffb454;
-  --site-success:  #6bcf6b;
-  --site-font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-  --site-font-body:    system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --site-font-code:    'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  --site-line-height: 1.6;
-  --site-flourish: var(--site-text);
-}
-
-[data-site-theme="academic"] {
-  --site-primary:  #14171a;
-  --site-accent:   #3b5b8c;
-  --site-text:     #14171a;
-  --site-muted:    #5f6368;
-  --site-bg:       #ffffff;
-  --site-surface:  #f4f4f2;
-  --site-surface-2:#eeeeec;
-  --site-border:   #cccccc;
-  --site-info:     #3b5b8c;
-  --site-warn:     #8a5a2b;
-  --site-success:  #3f6b3f;
-  --site-font-heading: 'Times New Roman', 'Liberation Serif', Georgia, serif;
-  --site-font-body:    'Times New Roman', 'Liberation Serif', Georgia, serif;
-  --site-font-code:    'Courier New', Consolas, monospace;
-  --site-line-height: 1.7;
-  --site-flourish: var(--site-text);
-}
-
-[data-site-theme="editorial"] {
-  --site-primary:  #1a1a1a;
-  --site-accent:   #d1495b;
-  --site-text:     #1a1a1a;
-  --site-muted:    #767676;
-  --site-bg:       #ffffff;
-  --site-surface:  #f7f7f7;
-  --site-surface-2:#f1f1f1;
-  --site-border:   #e3e3e3;
-  --site-info:     #d1495b;
-  --site-warn:     #d9822b;
-  --site-success:  #3f9142;
-  --site-font-heading: 'Georgia', 'Iowan Old Style', serif;
-  --site-font-body:    system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --site-font-code:    'JetBrains Mono', Consolas, monospace;
-  --site-line-height: 1.6;
-  --site-flourish: var(--site-accent);
-}
 
 /* ---------------------------------------------------------------------
  * Reset & base
@@ -357,11 +209,13 @@ a:hover { text-decoration-thickness: 2px; }
 .theme-swatch[aria-pressed="true"] {
   border-color: var(--site-text);
 }
+/* Gradient is set inline per swatch (style="background:...") straight
+   from the theme's own bg/accent colors — see swatchGradient() in
+   scripts/docsgen/themevars.go. */
 .swatch-dot {
   width: 16px; height: 16px;
   border-radius: 50%;
   border: 1px solid rgba(0,0,0,.15);
-  background: var(--dot-bg);
 }
 .theme-swatch-label {
   font-size: .58rem;
@@ -370,16 +224,6 @@ a:hover { text-decoration-thickness: 2px; }
   text-transform: uppercase;
 }
 .theme-swatch[aria-pressed="true"] .theme-swatch-label { color: var(--site-text); }
-
-.swatch-dot[data-theme="default"]   { --dot-bg: linear-gradient(135deg, #ffffff 50%, #4a6cf7 50%); }
-.swatch-dot[data-theme="minimal"]   { --dot-bg: linear-gradient(135deg, #ffffff 50%, #4a6cf7 50%); border-style: dashed; }
-.swatch-dot[data-theme="modern"]    { --dot-bg: linear-gradient(135deg, #ffffff 50%, #6366f1 50%); }
-.swatch-dot[data-theme="classic"]   { --dot-bg: linear-gradient(135deg, #fffdf8 50%, #7a4a2b 50%); }
-.swatch-dot[data-theme="corporate"] { --dot-bg: linear-gradient(135deg, #ffffff 50%, #1a56db 50%); }
-.swatch-dot[data-theme="dark"]      { --dot-bg: linear-gradient(135deg, #121212 50%, #7aa2ff 50%); }
-.swatch-dot[data-theme="academic"]  { --dot-bg: linear-gradient(135deg, #ffffff 50%, #3b5b8c 50%); }
-.swatch-dot[data-theme="editorial"] { --dot-bg: linear-gradient(135deg, #ffffff 50%, #d1495b 50%); }
-.swatch-dot { background: var(--dot-bg); }
 
 /* ---------------------------------------------------------------------
  * Main
@@ -829,7 +673,7 @@ a:hover { text-decoration-thickness: 2px; }
     border-top: 1px solid var(--site-border);
     padding: .85rem 1.25rem;
   }
-  .theme-swatches { grid-template-columns: repeat(8, 1fr); gap: .3rem; }
+  .theme-swatches { grid-template-columns: repeat(auto-fit, minmax(24px, 1fr)); gap: .3rem; }
   .theme-swatch-label { display: none; }
   .main { margin-left: 0; padding: 2rem 1.5rem; }
   .hero-section .section-title { font-size: 1.6rem; }

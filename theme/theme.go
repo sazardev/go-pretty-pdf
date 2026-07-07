@@ -20,6 +20,13 @@ type Theme struct {
 	// Sections holds this theme's own section defaults (all true unless a
 	// theme has a good reason to ship differently).
 	Sections ResolvedSections
+	// Accented marks themes that use their accent color as a bold,
+	// structural design element (a border on the cover/heading, an
+	// accent-colored blockquote, etc.) rather than reserving it for links
+	// only. Consumers that want to echo a theme's visual identity outside
+	// the PDF itself (e.g. the docs website's theme switcher) can read this
+	// instead of guessing from the CSS or hardcoding a list.
+	Accented bool
 }
 
 // Colors overrides the CSS custom properties a theme's palette is built

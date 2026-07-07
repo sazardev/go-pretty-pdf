@@ -316,7 +316,7 @@ render:
 
 ## Themes
 
-Eight built-in themes are available, each a palette/typography layer over a
+Sixteen built-in themes are available, each a palette/typography layer over a
 shared structural stylesheet (`theme/assets/base.css`):
 
 | Theme | Category | Description |
@@ -329,6 +329,14 @@ shared structural stylesheet (`theme/assets/base.css`):
 | `dark` | dark | Dark background with light text. Best for on-screen PDFs. |
 | `academic` | academic | Formal serif layout for theses, papers, and reports. |
 | `editorial` | editorial | Magazine-style display headings and pull-quote blockquotes. |
+| `sepia` | warm | Warm, sepia-toned palette for long, comfortable reading sessions. |
+| `terminal` | technical | All-monospace, terminal-inspired look for technical references. |
+| `blueprint` | technical | Dark technical blueprint palette with monospace type and cyan highlights. |
+| `ivy` | institutional | Classic Ivy League university letterhead: forest green and gold on cream. |
+| `government` | institutional | Formal official-document palette: navy and bronze, centered headings. |
+| `resume` | resume | Clean, ATS-friendly sans-serif for CVs and one-pagers — no cover or TOC. |
+| `legal` | formal | Stark, formal brief style: black ink, no color as decoration. |
+| `latex` | academic | Mathematical/scientific paper look with automatic section numbering. |
 
 Run `pretty-pdf theme list` to see this list plus any custom themes, and
 `pretty-pdf theme show <name>` to print a theme's final resolved CSS.

@@ -1,0 +1,44 @@
+/* government — formal official-document palette: navy and bronze, Times New Roman. */
+
+:root {
+  --pdf-primary: #14213d;
+  --pdf-accent: #a6862c;
+  --pdf-text: #14213d;
+  --pdf-muted: #5a6472;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #eef1f5;
+  --pdf-surface-2: #e3e8ee;
+  --pdf-border: #c7d0dc;
+  --pdf-info: #14213d;
+  --pdf-warn: #a6862c;
+  --pdf-success: #2f6d45;
+  --pdf-font-heading: 'Times New Roman', 'Liberation Serif', Georgia, serif;
+  --pdf-font-body: 'Times New Roman', 'Liberation Serif', Georgia, serif;
+  --pdf-font-code: 'Courier New', Consolas, monospace;
+}
+
+body {
+  text-align: justify;
+}
+
+h1 {
+  border-bottom: 3px double var(--pdf-primary, #14213d);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: center;
+}
+
+h2 {
+  border-bottom: 1px solid var(--pdf-border, #c7d0dc);
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+  border-top: 6px solid var(--pdf-primary, #14213d);
+  padding-top: 28pt;
+}
+
+.cover-subtitle {
+  max-width: 100%;
+}

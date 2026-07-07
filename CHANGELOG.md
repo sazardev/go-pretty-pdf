@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-07
+
+### Added
+
+- **8 new builtin themes**, bringing the total to 16 — each required only a CSS file and a registry entry in `theme/builtin.go` to appear correctly in the CLI (`pretty-pdf theme list`) and the docs website (switcher + its own dogfooded PDF), with zero other files touched:
+  - `sepia` — warm, soft palette for long reading sessions
+  - `terminal` — all-monospace, terminal-inspired, with a `$ ` prompt-style cover
+  - `blueprint` — dark technical palette with cyan highlights and a dashed cover border
+  - `ivy` — classic Ivy League university letterhead (forest green and gold)
+  - `government` — formal official-document palette (navy and bronze, centered headings, double rules)
+  - `resume` — clean ATS-friendly sans-serif for CVs; disables cover/TOC/page numbers/header by default
+  - `legal` — stark, formal brief style with no color used as decoration
+  - `latex` — mathematical/scientific paper look with automatic, chapter-scoped section numbering (1., 1.1, 1.2, 2., ...) via CSS counters
+- Five new theme categories: `warm`, `technical`, `institutional`, `resume`, `formal`.
+- `theme.Theme.Accented`: marks builtin themes (classic, modern, corporate, editorial, terminal, blueprint, ivy, government) that use their accent color as a bold structural element (cover border, accent blockquote) rather than just for links.
+- `resumeSections`: a `ResolvedSections` preset (all sections off) for themes meant for short, single-flow documents.
+
+### Changed
+
+- **docs site theme automation**: `scripts/docsgen` now derives every theme's colors, fonts, and accent treatment straight from `theme.List()` and each theme's own CSS at build time (see `themevars.go`), instead of a hand-maintained, hardcoded copy of the palette in `site.css`. Adding a builtin theme to `theme/builtin.go` is now the only step needed for it to appear in the docs site's theme switcher, get correct swatch colors, and get its own dogfooded "docs as a PDF" download — nothing to keep in sync by hand. This is also what caused the "incoherent blue" bug fixed earlier: the site's copy had drifted from the real theme CSS.
+
 ## [0.5.0] - 2026-07-07
 
 ### Added
@@ -163,6 +184,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI (lint, test, vet, build on 3 OS) and release pipeline (goreleaser)
 - Local Makefile with lint, test, build, and release-dry-run targets
 
+[0.6.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.6.0
 [0.5.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.5.0
 [0.4.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.4.0
 [0.3.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.3.0

@@ -1,0 +1,43 @@
+/* ivy — classic Ivy League university letterhead: forest green and gold on cream. */
+
+:root {
+  --pdf-primary: #1b3a2b;
+  --pdf-accent: #a6802a;
+  --pdf-text: #1b1b1b;
+  --pdf-muted: #5c5c5c;
+  --pdf-bg: #ffffff;
+  --pdf-surface: #f4f1ea;
+  --pdf-surface-2: #ece7da;
+  --pdf-border: #d8cfae;
+  --pdf-info: #2f5233;
+  --pdf-warn: #a6802a;
+  --pdf-success: #2f5233;
+  --pdf-font-heading: 'Garamond', 'Iowan Old Style', Georgia, serif;
+  --pdf-font-body: 'Garamond', Georgia, serif;
+  --pdf-font-code: 'Courier New', Consolas, monospace;
+  --pdf-line-height: 1.7;
+}
+
+h1, h2 {
+  border-bottom: 1px solid var(--pdf-border, #d8cfae);
+  padding-bottom: 6pt;
+}
+
+.cover {
+  text-align: center;
+  align-items: center;
+  border-top: 10px solid var(--pdf-primary, #1b3a2b);
+  border-bottom: 10px solid var(--pdf-accent, #a6802a);
+  padding: 32pt 24pt;
+}
+
+.cover h1 {
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: none;
+}
+
+.cover-subtitle {
+  max-width: 100%;
+  font-style: italic;
+}

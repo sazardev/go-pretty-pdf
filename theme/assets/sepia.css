@@ -1,0 +1,23 @@
+/* sepia — warm, soft palette for long, comfortable reading sessions. */
+
+:root {
+  --pdf-primary: #3b2a1a;
+  --pdf-accent: #a0522d;
+  --pdf-text: #3b2a1a;
+  --pdf-muted: #8a7460;
+  --pdf-bg: #f2e8d5;
+  --pdf-surface: #e8dbc0;
+  --pdf-surface-2: #e0d0b0;
+  --pdf-border: #cbb894;
+  --pdf-info: #5b7c99;
+  --pdf-warn: #b8860b;
+  --pdf-success: #6b8e23;
+  --pdf-font-heading: 'Iowan Old Style', 'Palatino', Georgia, serif;
+  --pdf-font-body: 'Palatino', 'Book Antiqua', Georgia, serif;
+  --pdf-font-code: 'Courier New', Consolas, monospace;
+  --pdf-line-height: 1.7;
+}
+
+blockquote {
+  font-style: italic;
+}

@@ -64,13 +64,13 @@ func generateDocsPDF(outDir string, readme, cli, changelog []byte) {
 		}
 	}
 
-	for _, t := range siteThemes {
-		outPath := filepath.Join(outDir, docsPDFFilename(t.ID))
-		if err := buildOneDocsPDF(srcDir, outPath, t.ID); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: skipping docs PDF (theme %s): %v\n", t.ID, err)
+	for _, t := range theme.List() {
+		outPath := filepath.Join(outDir, docsPDFFilename(t.Name))
+		if err := buildOneDocsPDF(srcDir, outPath, t.Name); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping docs PDF (theme %s): %v\n", t.Name, err)
 			continue
 		}
-		if t.ID == theme.NameClassic {
+		if t.Name == theme.NameClassic {
 			if err := copyFile(outPath, filepath.Join(outDir, docsPDFDefault)); err != nil {
 				fmt.Fprintf(os.Stderr, "warning: could not stage default docs PDF: %v\n", err)
 			}

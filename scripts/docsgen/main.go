@@ -14,6 +14,8 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkHtml "github.com/yuin/goldmark/renderer/html"
+
+	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
 //go:embed assets/site.css
@@ -29,20 +31,6 @@ const (
 	siteDescription = "go-pretty-pdf turns a folder of Markdown/MDX into a beautifully typeset, print-ready PDF via headless Chrome — as a Go library or CLI. No LaTeX, no design tools."
 	siteKeywords    = "markdown to pdf, mdx to pdf, go pdf generator, golang pdf library, cli pdf generator, print-ready pdf, headless chrome pdf, markdown book generator, mdx renderer"
 )
-
-// siteThemes lists the builtin CLI themes exposed in the site's theme
-// switcher, in the same order as theme.List(). Kept in sync manually since
-// docsgen intentionally has no dependency on the theme package.
-var siteThemes = []struct{ ID, Name, Desc string }{
-	{"default", "Default", "Clean, professional look that fits any technical document."},
-	{"minimal", "Minimal", "Stripped down: smaller type, no borders, maximum simplicity."},
-	{"modern", "Modern", "Sans-serif with generous whitespace and bold accent underlines."},
-	{"classic", "Classic", "Serif, traditional book layout — ink on paper."},
-	{"corporate", "Corporate", "Structured blue/gray palette for client-facing reports."},
-	{"dark", "Dark", "Dark background with light text. Best for on-screen PDFs."},
-	{"academic", "Academic", "Formal serif layout for theses, papers, and reports."},
-	{"editorial", "Editorial", "Magazine-style display headings and pull-quote blockquotes."},
-}
 
 type Section struct {
 	ID      string
@@ -433,7 +421,7 @@ func buildHTML(sections []Section) string {
 		siteTitle, siteDescription, siteBaseURL, siteBaseURL,
 		siteTitle, siteDescription, siteBaseURL,
 		jsonLD(),
-		siteCSS, strings.Join(navItems, "\n    "), themeSwitcherHTML(), strings.Join(bodyParts, "\n  "), commandPaletteHTML(), siteJS)
+		siteCSS+"\n"+generatedThemeCSS(), strings.Join(navItems, "\n    "), themeSwitcherHTML(), strings.Join(bodyParts, "\n  "), commandPaletteHTML(), siteJS)
 }
 
 // jsonLD returns the page's structured data: a WebSite entry plus a
@@ -491,22 +479,27 @@ func commandPaletteHTML() string {
 </div>`
 }
 
+// themeSwitcherHTML renders one swatch per theme.List() entry — adding a
+// builtin theme to theme/builtin.go is enough for it to show up here, with
+// correct colors (swatchGradient reads the theme's own CSS) and no
+// per-theme code to write.
 func themeSwitcherHTML() string {
 	var b strings.Builder
 	b.WriteString(`<div class="theme-switcher">
     <span class="theme-switcher-label">Theme</span>
     <div class="theme-swatches">
 `)
-	for _, t := range siteThemes {
+	for _, t := range theme.List() {
 		pressed := "false"
-		if t.ID == "classic" {
+		if t.Name == theme.NameClassic {
 			pressed = "true"
 		}
+		name := displayName(t.Name)
 		fmt.Fprintf(&b, `      <button type="button" class="theme-swatch" data-theme="%s" title="%s &mdash; %s" aria-pressed="%s">
-        <span class="swatch-dot" data-theme="%s"></span>
+        <span class="swatch-dot" style="background:%s"></span>
         <span class="theme-swatch-label">%s</span>
       </button>
-`, t.ID, t.Name, t.Desc, pressed, t.ID, t.Name)
+`, t.Name, name, t.Description, pressed, swatchGradient(t), name)
 	}
 	b.WriteString(`    </div>
   </div>`)
