@@ -29,6 +29,11 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		fmt.Println("  " + output.KeyValue("Output", cfg.Output))
 	}
 
+	chromeExecPath, err := resolveChromePath()
+	if err != nil {
+		return fmt.Errorf("resolving Chrome: %w", err)
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("creating watcher: %w", err)
@@ -95,7 +100,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 
 		startTime := time.Now()
 
-		opts := buildOpts(cfg)
+		opts := buildOpts(cfg, chromeExecPath)
 		pdf, err := prettypdf.New(opts...)
 
 		if err != nil {

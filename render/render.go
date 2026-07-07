@@ -25,6 +25,13 @@ type Options struct {
 	NetworkAccess bool
 	PageNumbers   bool
 	ShowHeader    bool
+	// ChromeExecPath, when non-empty, pins chromedp to this specific
+	// Chrome/Chromium/chrome-headless-shell binary instead of letting it
+	// search the system's default install locations. Callers resolving a
+	// browser via chromemgr.EnsureChrome pass its result straight through
+	// here; leaving it empty preserves the previous default-discovery
+	// behavior exactly.
+	ChromeExecPath string
 }
 
 func DefaultOptions() Options {
@@ -47,20 +54,22 @@ func DefaultOptions() Options {
 }
 
 func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
-	allocCtx, allocCancel := chromedp.NewExecAllocator(
-		context.Background(),
-		append(chromedp.DefaultExecAllocatorOptions[:],
-			chromedp.DisableGPU,
-			chromedp.NoSandbox,
-			chromedp.Headless,
-			chromedp.Flag("disable-dev-shm-usage", true),
-			// Chrome can take longer than chromedp's 20s default to print its
-			// DevTools websocket URL on a cold/loaded CI runner (e.g. right
-			// after a fresh install); give it more room to avoid a spurious
-			// "websocket url timeout reached" before the browser even starts.
-			chromedp.WSURLReadTimeout(45*time.Second),
-		)...,
+	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.DisableGPU,
+		chromedp.NoSandbox,
+		chromedp.Headless,
+		chromedp.Flag("disable-dev-shm-usage", true),
+		// Chrome can take longer than chromedp's 20s default to print its
+		// DevTools websocket URL on a cold/loaded CI runner (e.g. right
+		// after a fresh install); give it more room to avoid a spurious
+		// "websocket url timeout reached" before the browser even starts.
+		chromedp.WSURLReadTimeout(45*time.Second),
 	)
+	if opts.ChromeExecPath != "" {
+		allocOpts = append(allocOpts, chromedp.ExecPath(opts.ChromeExecPath))
+	}
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), allocOpts...)
 	defer allocCancel()
 
 	ctx, cancel := chromedp.NewContext(allocCtx)

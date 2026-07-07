@@ -9,7 +9,10 @@ GitHub: <https://github.com/sazardev/go-pretty-pdf>
 
 ## Requirements
 
-- **Chrome or Chromium** must be installed on the system for PDF rendering.
+- **Chrome or Chromium** — optional. If `pretty-pdf` can't find one on your system, it automatically downloads and caches an official, automation-only "chrome-headless-shell" build the first time you run a command that renders a PDF (`build`, `watch`). This mirrors what tools like Playwright/Puppeteer do; `serve` never needs Chrome since it only previews HTML. The download is cached under your OS's user cache directory (e.g. `~/.cache/go-pretty-pdf/chrome` on Linux) and reused on every later run.
+  - Already have Chrome/Chromium installed? It's detected and used automatically — nothing is downloaded.
+  - Want to pin a specific binary instead (skip detection/download entirely)? Pass `--chrome-path /path/to/chrome` or set the `PRETTY_PDF_CHROME_PATH` environment variable.
+  - Supported for auto-download: linux/amd64, darwin/amd64, darwin/arm64, windows/amd64. On linux/arm64 (no official build exists yet), install Chromium via your system's package manager and use `--chrome-path`.
 - Go 1.26+ (if building from source).
 
 ## Usage
@@ -24,6 +27,7 @@ pretty-pdf [command] [flags]
 |---|---|---|
 | `--config` | `""` | Path to config file |
 | `--source` | `"book"` | Source MDX directory |
+| `--chrome-path` | `$PRETTY_PDF_CHROME_PATH` | Path to a Chrome/Chromium executable (skips auto-detection/download) |
 | `--verbose` | `false` | Verbose output |
 | `--no-color` | `false` | Disable colored output |
 | `--quiet` | `false` | Suppress non-error output |
@@ -414,6 +418,7 @@ Available in HTML templates:
 ## Environment
 
 - `NO_COLOR` environment variable is respected (disables colored output).
+- `PRETTY_PDF_CHROME_PATH` sets the default for `--chrome-path`: a specific Chrome/Chromium executable to use, skipping auto-detection and auto-download.
 
 ## Exit Codes
 

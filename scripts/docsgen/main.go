@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,9 +16,38 @@ import (
 	goldmarkHtml "github.com/yuin/goldmark/renderer/html"
 )
 
+//go:embed assets/site.css
+var siteCSS string
+
+//go:embed assets/site.js
+var siteJS string
+
+const (
+	siteBaseURL     = "https://sazardev.github.io/go-pretty-pdf/"
+	siteRepoURL     = "https://github.com/sazardev/go-pretty-pdf"
+	siteTitle       = "go-pretty-pdf — Turn Markdown into Beautiful, Print-Ready PDFs (Go)"
+	siteDescription = "go-pretty-pdf turns a folder of Markdown/MDX into a beautifully typeset, print-ready PDF via headless Chrome — as a Go library or CLI. No LaTeX, no design tools."
+	siteKeywords    = "markdown to pdf, mdx to pdf, go pdf generator, golang pdf library, cli pdf generator, print-ready pdf, headless chrome pdf, markdown book generator, mdx renderer"
+)
+
+// siteThemes lists the builtin CLI themes exposed in the site's theme
+// switcher, in the same order as theme.List(). Kept in sync manually since
+// docsgen intentionally has no dependency on the theme package.
+var siteThemes = []struct{ ID, Name, Desc string }{
+	{"default", "Default", "Clean, professional look that fits any technical document."},
+	{"minimal", "Minimal", "Stripped down: smaller type, no borders, maximum simplicity."},
+	{"modern", "Modern", "Sans-serif with generous whitespace and bold accent underlines."},
+	{"classic", "Classic", "Serif, traditional book layout — ink on paper."},
+	{"corporate", "Corporate", "Structured blue/gray palette for client-facing reports."},
+	{"dark", "Dark", "Dark background with light text. Best for on-screen PDFs."},
+	{"academic", "Academic", "Formal serif layout for theses, papers, and reports."},
+	{"editorial", "Editorial", "Magazine-style display headings and pull-quote blockquotes."},
+}
+
 type Section struct {
 	ID      string
 	Title   string
+	Eyebrow string
 	Content string
 }
 
@@ -50,10 +80,24 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error creating output directory: %v\n", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(filepath.Join(outDir, "index.html"), []byte(html), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "error writing index.html: %v\n", err)
-		os.Exit(1)
+	textAssets := map[string]string{
+		"index.html":       html,
+		"robots.txt":       robotsTXT(),
+		"sitemap.xml":      sitemapXML(),
+		"site.webmanifest": webManifest(),
+		"llms.txt":         llmsTXT(),
+		"favicon.svg":      faviconSVG(),
 	}
+	for name, content := range textAssets {
+		if err := os.WriteFile(filepath.Join(outDir, name), []byte(content), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "error writing %s: %v\n", name, err)
+			os.Exit(1)
+		}
+	}
+
+	generateRasterAssets(outDir)
+	generateDocsPDF(outDir, readme, cli, changelog)
+
 	fmt.Println("Documentation site generated at _site/index.html")
 }
 
@@ -75,24 +119,28 @@ func findRepoRoot() (string, error) {
 }
 
 func heroSection() Section {
-	ascii := `                             .__
-  ____   ______             ______  |  |   _____  ____  __ __
- / ___\ /  ___/  ______   /  ___/  |  |   \__  \ \__  \|  |  \
-/ /_/  >\___ \  /_____/   \___ \   |  |__  / __ \_/ __ \   Y  \
-\___  /____  >           /____  >  |____/ (____  (____  /___|  /
-/_____/    \/                 \/               \/     \/     \/
+	ascii := ` ###   ###        ####  ####  ##### ##### ##### #   #       ####  ####  #####
+#     #   #       #   # #   # #       #     #    # #        #   # #   # #
+#  ## #   # ##### ####  ####  ####    #     #     #   ##### ####  #   # ####
+#   # #   #       #     #  #  #       #     #     #         #     #   # #
+ ###   ###        #     #   # #####   #     #     #         #     ####  #
 `
 	return Section{
-		ID:    "hero",
-		Title: "go-pretty-pdf",
+		ID:      "hero",
+		Title:   "go-pretty-pdf",
+		Eyebrow: "MDX &rarr; PDF, via headless Chrome",
 		Content: `<pre class="hero-ascii">` + ascii + `</pre>
 <div class="hero-line"></div>
-<p class="hero-tagline">Transform a directory of MDX files into a beautiful, print-ready PDF via headless Chrome.</p>
+<p class="hero-tagline">Turn a folder of MDX into a beautifully typeset, print-ready PDF &mdash; no LaTeX, no design tools, no fuss.</p>
 <div class="hero-meta">
   <span>Library + CLI</span>
   <span>Go 1.26+</span>
   <span>MIT</span>
 </div>
+<a class="download-pdf-btn" id="download-pdf-btn" href="` + docsPDFDefault + `" download>
+  <span>Download these docs as a PDF</span>
+  <span class="download-pdf-sub" id="download-pdf-sub">in the Classic theme &mdash; rendered by go-pretty-pdf itself</span>
+</a>
 <div class="hero-install">
   <div class="install-block">
     <span class="install-label">CLI</span>
@@ -197,10 +245,14 @@ func cliSections(src []byte, md goldmark.Markdown) []Section {
 }
 
 func changelogSection(src []byte, md goldmark.Markdown) []Section {
+	// Drop the file's own leading "# Changelog" H1: the section already
+	// renders "Changelog" as its own heading, and a page must have exactly
+	// one <h1> (the hero) for a clean, crawlable document outline.
+	body := regexp.MustCompile(`(?m)^#\s+Changelog\s*\n`).ReplaceAll(src, nil)
 	return []Section{{
 		ID:      "changelog",
 		Title:   "Changelog",
-		Content: renderMarkdown(src, md),
+		Content: renderMarkdown(body, md),
 	}}
 }
 
@@ -290,21 +342,59 @@ func buildHTML(sections []Section) string {
 	for i, s := range sections {
 		navItems[i] = fmt.Sprintf(`<a href="#%s">%s</a>`, s.ID, s.Title)
 		cls := "section"
+		eyebrow := ""
+		headingTag := "h2"
 		if s.ID == "hero" {
 			cls = "section hero-section"
+			eyebrow = fmt.Sprintf(`<p class="hero-eyebrow">%s</p>`, s.Eyebrow)
+			// The hero is the page's single <h1>; every other section heading
+			// is an <h2>, giving crawlers (and assistive tech) an unambiguous
+			// document outline instead of a flat run of <h2>s.
+			headingTag = "h1"
 		}
 		bodyParts[i] = fmt.Sprintf(
-			`<section id="%s" class="%s"><h2>%s</h2><div class="section-content">%s</div></section>`,
-			s.ID, cls, s.Title, s.Content)
+			`<section id="%s" class="%s">%s<%s class="section-title">%s</%s><div class="section-content">%s</div></section>`,
+			s.ID, cls, eyebrow, headingTag, s.Title, headingTag, s.Content)
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-site-theme="classic">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>go-pretty-pdf &mdash; Documentation</title>
-<meta name="description" content="Transform MDX files into beautiful, print-ready PDFs via headless Chrome.">
+<title>%s</title>
+<meta name="description" content="%s">
+<meta name="keywords" content="%s">
+<meta name="author" content="sazardev">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="googlebot" content="index, follow">
+<link rel="canonical" href="%s">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#fffdf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="go-pretty-pdf">
+<meta property="og:title" content="%s">
+<meta property="og:description" content="%s">
+<meta property="og:url" content="%s">
+<meta property="og:image" content="%sog-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="go-pretty-pdf &mdash; write Markdown, ship a book.">
+<meta property="og:locale" content="en_US">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="%s">
+<meta name="twitter:description" content="%s">
+<meta name="twitter:image" content="%sog-image.png">
+
+<script type="application/ld+json">%s</script>
+
 <style>
 %s
 </style>
@@ -313,8 +403,17 @@ func buildHTML(sections []Section) string {
 <nav class="sidebar">
   <div class="sidebar-brand">
     <a href="#hero">go-pretty-pdf</a>
+    <span class="sidebar-tagline">Write Markdown. Ship a book.</span>
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="sidebar-nav" aria-label="Toggle navigation">&#9776;</button>
   </div>
-  <div class="sidebar-nav">
+  <div class="sidebar-nav" id="sidebar-nav">
+    %s
+  </div>
+  <div class="sidebar-footer">
+    <button type="button" class="palette-trigger" id="palette-trigger" aria-label="Open command palette">
+      <span>Search sections</span>
+      <kbd id="palette-shortcut-hint">Ctrl K</kbd>
+    </button>
     %s
   </div>
 </nav>
@@ -324,342 +423,92 @@ func buildHTML(sections []Section) string {
     <p>Generated from source &mdash; <a href="https://github.com/sazardev/go-pretty-pdf">GitHub</a> &middot; <a href="https://pkg.go.dev/github.com/sazardev/go-pretty-pdf">pkg.go.dev</a></p>
   </footer>
 </main>
+%s
+<script>
+%s
+</script>
 </body>
-</html>`, css(), strings.Join(navItems, "\n    "), strings.Join(bodyParts, "\n  "))
+</html>`,
+		siteTitle, siteDescription, siteKeywords, siteBaseURL,
+		siteTitle, siteDescription, siteBaseURL, siteBaseURL,
+		siteTitle, siteDescription, siteBaseURL,
+		jsonLD(),
+		siteCSS, strings.Join(navItems, "\n    "), themeSwitcherHTML(), strings.Join(bodyParts, "\n  "), commandPaletteHTML(), siteJS)
 }
 
-func css() string {
-	return `
-:root {
-  --bg:            #fafafa;
-  --bg-card:       #ffffff;
-  --bg-hover:      #f0f0f0;
-  --border:        #e5e5e5;
-  --border-light:  #f0f0f0;
-  --text:          #1a1a1a;
-  --text-secondary:#555555;
-  --text-muted:    #888888;
-  --accent:        #4f46e5;
-  --accent-light:  #818cf8;
-  --accent-bg:     #eef2ff;
-  --code-bg:       #1e1e2e;
-  --code-text:     #cdd6f4;
-  --inline-bg:     #f0f0f5;
-  --inline-text:   #4f46e5;
-  --green:         #059669;
-  --sidebar-w:     250px;
-  --radius:        6px;
-  --font:          -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono:     'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+// jsonLD returns the page's structured data: a WebSite entry plus a
+// SoftwareApplication entry describing the CLI/library, so search engines
+// and LLM crawlers can identify go-pretty-pdf as a concrete, installable
+// open-source tool rather than just a prose page.
+func jsonLD() string {
+	return `{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "go-pretty-pdf",
+      "url": "` + siteBaseURL + `",
+      "description": "` + siteDescription + `",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "go-pretty-pdf",
+      "description": "` + siteDescription + `",
+      "url": "` + siteBaseURL + `",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux, macOS, Windows",
+      "programmingLanguage": "Go",
+      "license": "` + siteRepoURL + `/blob/master/LICENSE",
+      "codeRepository": "` + siteRepoURL + `",
+      "downloadUrl": "` + siteRepoURL + `/releases",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "sazardev",
+        "url": "https://github.com/sazardev"
+      }
+    }
+  ]
+}`
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html { scroll-behavior: smooth; scroll-padding-top: 3rem; }
-
-body {
-  font-family: var(--font);
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.75;
-  display: flex;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
+func commandPaletteHTML() string {
+	return `<div class="command-palette" id="command-palette" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+  <div class="command-palette-backdrop" data-palette-close></div>
+  <div class="command-palette-panel">
+    <div class="command-palette-input-row">
+      <span class="command-palette-prompt">&gt;</span>
+      <input type="text" id="command-palette-input" class="command-palette-input" placeholder="Jump to a section&hellip;" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <kbd>ESC</kbd>
+    </div>
+    <ul class="command-palette-results" id="command-palette-results"></ul>
+  </div>
+</div>`
 }
 
-a { color: var(--accent); text-decoration: none; transition: color .15s; }
-a:hover { color: var(--accent-light); }
-
-/*** Sidebar ***/
-
-.sidebar {
-  position: fixed; top: 0; left: 0;
-  width: var(--sidebar-w); height: 100vh;
-  background: var(--bg-card);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 2rem 0 1.5rem;
-  z-index: 100;
-}
-.sidebar-brand {
-  padding: 0 1.5rem 1.25rem;
-  border-bottom: 1px solid var(--border-light);
-  margin-bottom: .75rem;
-}
-.sidebar-brand a {
-  font-size: 1rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  color: var(--text) !important;
-  letter-spacing: -.01em;
-}
-.sidebar-nav { padding: .25rem 0; }
-.sidebar-nav a {
-  display: block;
-  padding: .35rem 1.5rem;
-  font-size: .8rem;
-  color: var(--text-secondary);
-  border-left: 2px solid transparent;
-  transition: all .15s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sidebar-nav a:hover {
-  color: var(--text);
-  background: var(--bg-hover);
-  border-left-color: var(--accent);
-}
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/*** Main ***/
-
-.main {
-  margin-left: var(--sidebar-w);
-  flex: 1;
-  max-width: 800px;
-  padding: 3rem 4rem 3rem;
-}
-
-/*** Hero ***/
-
-.hero-section {
-  padding: 2rem 0 3rem;
-  margin-bottom: 3rem;
-  border-bottom: 1px solid var(--border);
-}
-.hero-ascii {
-  font-family: var(--font-mono);
-  font-size: .55rem;
-  line-height: 1.3;
-  color: var(--accent);
-  white-space: pre;
-  margin-bottom: 1.5rem;
-  overflow-x: auto;
-  opacity: .85;
-}
-.hero-section h2 {
-  font-size: 2.25rem;
-  font-weight: 800;
-  letter-spacing: -.025em;
-  margin-bottom: .25rem;
-  color: var(--text);
-}
-.hero-line {
-  width: 48px; height: 3px;
-  background: var(--accent);
-  border-radius: 3px;
-  margin: 1rem 0 1.5rem;
-  animation: heroLineGrow .8s ease-out;
-}
-@keyframes heroLineGrow {
-  from { width: 0; opacity: 0; }
-  to   { width: 48px; opacity: 1; }
-}
-.hero-tagline {
-  font-size: 1.05rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-  max-width: 560px;
-}
-.hero-meta {
-  display: flex; gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-.hero-meta span {
-  font-size: .8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: .2rem .75rem;
-  background: var(--accent-bg);
-  border-radius: 99px;
-}
-.hero-install {
-  margin-bottom: 1.5rem;
-}
-.install-block {
-  margin-bottom: .75rem;
-}
-.install-label {
-  font-size: .7rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  margin-bottom: .3rem;
-  display: inline-block;
-}
-.install-cmd {
-  background: var(--code-bg);
-  border-radius: var(--radius);
-  padding: .75rem 1rem;
-  font-family: var(--font-mono);
-  font-size: .78rem;
-  color: var(--code-text);
-  overflow-x: auto;
-}
-.install-cmd code { background: none; padding: 0; border: none; font-size: inherit; color: inherit; }
-.hero-requirements {
-  font-size: .82rem;
-  color: var(--text-muted);
-  line-height: 1.6;
-}
-
-/*** Sections ***/
-
-.section {
-  margin-bottom: 3.5rem;
-  padding-bottom: 2.5rem;
-  border-bottom: 1px solid var(--border-light);
-}
-.section:last-of-type { border-bottom: none; }
-.section h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 1.25rem;
-  letter-spacing: -.015em;
-}
-.section h3 {
-  font-size: 1.05rem;
-  color: var(--text);
-  margin: 1.75rem 0 .75rem;
-  font-weight: 600;
-}
-.section h4 {
-  font-size: .92rem;
-  color: var(--text);
-  margin: 1.25rem 0 .5rem;
-  font-weight: 600;
-}
-.section p { margin: .75rem 0; color: var(--text); }
-
-/*** Content elements ***/
-
-.section-content table {
-  width: 100%; border-collapse: collapse;
-  margin: 1rem 0 1.5rem;
-  font-size: .85rem;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.section-content table th,
-.section-content table td {
-  padding: .55rem .85rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-light);
-}
-.section-content table th {
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-weight: 600;
-  font-size: .75rem;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-.section-content table td { background: var(--bg-card); }
-.section-content table tr:last-child td { border-bottom: none; }
-
-.section-content pre {
-  background: var(--code-bg);
-  border-radius: var(--radius);
-  padding: 1rem 1.15rem;
-  overflow-x: auto;
-  margin: 1rem 0;
-}
-.section-content pre code {
-  font-family: var(--font-mono);
-  font-size: .78rem;
-  line-height: 1.6;
-  color: var(--code-text);
-  background: none; padding: 0; border: none;
-}
-.section-content code {
-  font-family: var(--font-mono);
-  font-size: .82rem;
-  background: var(--inline-bg);
-  color: var(--inline-text);
-  padding: .12em .45em;
-  border-radius: 3px;
-}
-.section-content pre code {
-  background: none;
-  color: var(--code-text);
-  padding: 0;
-  border-radius: 0;
-}
-.section-content ul, .section-content ol { padding-left: 1.4rem; margin: .75rem 0; }
-.section-content li { margin: .3rem 0; }
-.section-content li::marker { color: var(--text-muted); }
-.section-content blockquote {
-  border-left: 3px solid var(--accent-light);
-  padding: .5rem 1rem;
-  margin: 1rem 0;
-  color: var(--text-secondary);
-  background: var(--accent-bg);
-  border-radius: 0 var(--radius) var(--radius) 0;
-  font-style: italic;
-}
-.section-content hr { border: none; border-top: 1px solid var(--border-light); margin: 2rem 0; }
-.section-content img { max-width: 100%; }
-.section-content input[type="checkbox"] { margin-right: .35rem; accent-color: var(--accent); }
-.section-content a[href*="github.com"]::after {
-  content: " \2197";
-  font-size: .65rem; opacity: .4; font-style: normal;
-}
-
-/*** Footer ***/
-
-.footer {
-  margin-top: 3rem; padding-top: 1.5rem;
-  border-top: 1px solid var(--border-light);
-  text-align: center;
-  color: var(--text-muted);
-  font-size: .8rem;
-}
-.footer a { font-weight: 500; }
-
-/*** Animations ***/
-
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.section:not(.hero-section) {
-  animation: fadeSlideUp .5s ease-out both;
-}
-.section:nth-child(2)  { animation-delay: .05s; }
-.section:nth-child(3)  { animation-delay: .1s;  }
-.section:nth-child(4)  { animation-delay: .15s; }
-.section:nth-child(5)  { animation-delay: .2s;  }
-.section:nth-child(6)  { animation-delay: .25s; }
-.section:nth-child(7)  { animation-delay: .3s;  }
-.section:nth-child(8)  { animation-delay: .35s; }
-.section:nth-child(9)  { animation-delay: .4s;  }
-.section:nth-child(10) { animation-delay: .45s; }
-.section:nth-child(11) { animation-delay: .5s;  }
-.section:nth-child(12) { animation-delay: .55s; }
-.section:nth-child(13) { animation-delay: .6s;  }
-.section:nth-child(14) { animation-delay: .65s; }
-.section:nth-child(15) { animation-delay: .7s;  }
-
-/*** Responsive ***/
-
-@media (max-width: 900px) {
-  body { flex-direction: column; }
-  .sidebar {
-    position: relative; width: 100%; height: auto;
-    border-right: none; border-bottom: 1px solid var(--border);
-    padding: .75rem 1rem;
-  }
-  .sidebar-brand { padding: 0; border-bottom: none; margin-bottom: 0; }
-  .sidebar-nav { display: none; }
-  .main { margin-left: 0; padding: 1.5rem; }
-  .hero-section h2 { font-size: 1.75rem; }
-}
-`
+func themeSwitcherHTML() string {
+	var b strings.Builder
+	b.WriteString(`<div class="theme-switcher">
+    <span class="theme-switcher-label">Theme</span>
+    <div class="theme-swatches">
+`)
+	for _, t := range siteThemes {
+		pressed := "false"
+		if t.ID == "classic" {
+			pressed = "true"
+		}
+		fmt.Fprintf(&b, `      <button type="button" class="theme-swatch" data-theme="%s" title="%s &mdash; %s" aria-pressed="%s">
+        <span class="swatch-dot" data-theme="%s"></span>
+        <span class="theme-swatch-label">%s</span>
+      </button>
+`, t.ID, t.Name, t.Desc, pressed, t.ID, t.Name)
+	}
+	b.WriteString(`    </div>
+  </div>`)
+	return b.String()
 }

@@ -26,7 +26,7 @@ go get github.com/sazardev/go-pretty-pdf
 ### Requirements
 
 - **Go 1.26+**
-- **Chrome or Chromium** installed on the system (for PDF rendering)
+- **Chrome or Chromium** — optional. If none is found on your system, `pretty-pdf` automatically downloads and caches a small headless-only Chrome build the first time you run it (like Playwright/Puppeteer do). Already have Chrome installed? It's used as-is, nothing is downloaded. Prefer to control this yourself? Pass `--chrome-path /path/to/chrome` or set `PRETTY_PDF_CHROME_PATH`. Auto-download currently covers linux/amd64, darwin/amd64, darwin/arm64, and windows/amd64 — on linux/arm64 (no official build exists yet) install Chromium via your package manager and point `--chrome-path` at it.
 
 ## Quick start
 

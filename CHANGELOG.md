@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-07
+
 ### Added
 
+- **Automatic Chrome management** (`chromemgr` package): `pretty-pdf build`/`watch` no longer require Chrome/Chromium to be installed manually. If none is found, a small official "chrome-headless-shell" build (Google's Chrome for Testing distribution) is downloaded and cached under the OS user cache dir on first use, then reused on every later run — no different from what Playwright/Puppeteer do. A system-installed Chrome/Chromium is always preferred and used as-is when present. New `--chrome-path` flag / `PRETTY_PDF_CHROME_PATH` env var let users pin a specific binary and skip detection entirely. Covers linux/amd64, darwin/amd64, darwin/arm64, windows/amd64 (linux/arm64 has no upstream prebuilt binary yet and falls back to a clear error asking for a manual install).
+- **`render.Options.ChromeExecPath`** and **`prettypdf.WithChromeExecPath`**: point rendering at a specific Chrome/Chromium binary instead of chromedp's default discovery.
 - **Named theme constants**: `NameDefault`, `NameMinimal`, `NameModern`, `NameClassic`, `NameCorporate`, `NameDark`, `NameAcademic`, `NameEditorial` exported from `theme` package — custom theme code and tests can now reference themes by constant instead of raw strings, eliminating goconst lint warnings across the codebase
 
 ### Changed

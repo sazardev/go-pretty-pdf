@@ -27,6 +27,7 @@ var initAssets embed.FS
 var (
 	cfgFile    string
 	sourceDir  string
+	chromePath string
 	outPath    string
 	title      string
 	subtitle   string
@@ -135,6 +136,8 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file")
 	rootCmd.PersistentFlags().StringVar(&sourceDir, "source", "book", "source MDX directory")
+	rootCmd.PersistentFlags().StringVar(&chromePath, "chrome-path", os.Getenv("PRETTY_PDF_CHROME_PATH"),
+		"path to a Chrome/Chromium executable (skips auto-detection/download)")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output")
 	rootCmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "suppress non-error output")

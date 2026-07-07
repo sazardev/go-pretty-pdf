@@ -184,6 +184,17 @@ func WithNetworkAccess(enabled bool) Option {
 	}
 }
 
+// WithChromeExecPath pins rendering to a specific Chrome/Chromium binary
+// instead of chromedp's default system discovery. Leave unset (or pass "")
+// to keep the default behavior. See the chromemgr package for resolving
+// this automatically, including downloading a browser when none is
+// installed.
+func WithChromeExecPath(path string) Option {
+	return func(p *PDF) {
+		p.renderOpts.ChromeExecPath = path
+	}
+}
+
 func WithConfig(cfg *config.Config) Option {
 	return func(p *PDF) {
 		if cfg.Source != "" {

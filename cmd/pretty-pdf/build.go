@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,9 +11,9 @@ import (
 	"github.com/spf13/cobra"
 
 	prettypdf "github.com/sazardev/go-pretty-pdf"
+	"github.com/sazardev/go-pretty-pdf/chromemgr"
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
 	"github.com/sazardev/go-pretty-pdf/config"
-	"github.com/sazardev/go-pretty-pdf/render"
 	"github.com/sazardev/go-pretty-pdf/version"
 )
 
@@ -32,7 +33,9 @@ func runBuild(cmd *cobra.Command, args []string) error {
 
 	output.PrintBanner(version.Version)
 
-	preflightResults := runPreFlight(cfg)
+	chromeExecPath, chromeErr := resolveChromePath()
+
+	preflightResults := runPreFlight(cfg, chromeExecPath, chromeErr)
 	output.PrintPreFlight(preflightResults)
 
 	failed := false
@@ -65,7 +68,7 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	startTime := time.Now()
 
 	pipeline.Start("Parsing MDX files...")
-	opts := buildOpts(cfg)
+	opts := buildOpts(cfg, chromeExecPath)
 	pdf, err := prettypdf.New(opts...)
 	if err != nil {
 		pipeline.Fail("Parsing MDX files...", err.Error())
@@ -142,7 +145,12 @@ func runBuildJSON(cmd *cobra.Command) error {
 		return err
 	}
 
-	opts := buildOpts(cfg)
+	chromeExecPath, err := resolveChromePath()
+	if err != nil {
+		return fmt.Errorf("resolving Chrome: %w", err)
+	}
+
+	opts := buildOpts(cfg, chromeExecPath)
 	pdf, err := prettypdf.New(opts...)
 	if err != nil {
 		return err
@@ -187,18 +195,52 @@ func runBuildJSON(cmd *cobra.Command) error {
 	return nil
 }
 
-func runPreFlight(cfg *config.Config) []output.PreFlightResult {
+// resolveChromePath finds (or, as a last resort, downloads) a usable
+// Chrome/Chromium binary so users are never required to install one by
+// hand. See the chromemgr package for the full resolution order.
+//
+// A returned empty path with a nil error means a system install was found
+// and chromedp should use its own default discovery; render.Options
+// treats "" the same way.
+func resolveChromePath() (string, error) {
+	ctx := context.Background()
+
+	if chromePath != "" {
+		return chromemgr.EnsureChrome(ctx, chromePath, nil)
+	}
+	if chromemgr.SystemChromeAvailable(ctx) {
+		return "", nil
+	}
+
+	spinner := output.StartSpinner("Chrome/Chromium not found — downloading a headless build (one-time)...")
+	path, err := chromemgr.EnsureChrome(ctx, "", nil)
+	if err != nil {
+		spinner.Fail(err.Error())
+		return "", err
+	}
+	spinner.Done("Chrome downloaded and cached at " + path)
+	return path, nil
+}
+
+func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error) []output.PreFlightResult {
 	var results []output.PreFlightResult
 
-	if err := render.CheckChromeAvailable(); err != nil {
+	if chromeErr != nil {
 		results = append(results, output.PreFlightResult{
 			Name:    "Chrome/Chromium available",
 			Passed:  false,
-			Message: fmt.Sprintf("%v — Install Chrome or Chromium to render PDFs", err),
+			Message: chromeErr.Error(),
 		})
 	} else {
+		name := "Chrome/Chromium available"
+		switch {
+		case chromePath != "":
+			name = "Chrome/Chromium available (--chrome-path)"
+		case chromeExecPath != "":
+			name = "Chrome/Chromium available (auto-downloaded)"
+		}
 		results = append(results, output.PreFlightResult{
-			Name:   "Chrome/Chromium available",
+			Name:   name,
 			Passed: true,
 		})
 	}

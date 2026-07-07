@@ -35,7 +35,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 	fmt.Println("  " + output.KeyValue("Port", fmt.Sprintf("%d", servePort)))
 	fmt.Println()
 
-	opts := buildOpts(cfg)
+	// serve never calls pdf.Render/Build (it only parses+composes HTML for
+	// live preview), so it needs no Chrome resolution at all.
+	opts := buildOpts(cfg, "")
 	pdf, err := prettypdf.New(opts...)
 	if err != nil {
 		return fmt.Errorf("initializing: %w", err)

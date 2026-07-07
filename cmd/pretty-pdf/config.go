@@ -144,12 +144,13 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	return cfg, nil
 }
 
-func buildOpts(cfg *config.Config) []prettypdf.Option {
+func buildOpts(cfg *config.Config, chromeExecPath string) []prettypdf.Option {
 	return []prettypdf.Option{
 		prettypdf.WithVerbose(verbose),
 		prettypdf.WithFullConfig(cfg),
 		prettypdf.WithNetworkAccess(cfg.ThemeOptions.AllowNetworkFonts),
 		prettypdf.WithValidator(validatorFromConfig(cfg)),
+		prettypdf.WithChromeExecPath(chromeExecPath),
 	}
 }
 
