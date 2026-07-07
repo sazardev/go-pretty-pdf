@@ -33,6 +33,17 @@ import (
 
 const versionsURL = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
 
+// GOOS/GOARCH values referenced repeatedly below (platform mapping,
+// binary naming) — named to satisfy goconst and avoid typos.
+const (
+	goosLinux   = "linux"
+	goosDarwin  = "darwin"
+	goosWindows = "windows"
+
+	goarchAMD64 = "amd64"
+	goarchARM64 = "arm64"
+)
+
 // ProgressFunc receives human-readable status updates while EnsureChrome
 // downloads/extracts a browser. It may be nil.
 type ProgressFunc func(msg string)
@@ -125,7 +136,7 @@ func cacheDir() (string, error) {
 }
 
 func binaryName() string {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == goosWindows {
 		return "chrome-headless-shell.exe"
 	}
 	return "chrome-headless-shell"
@@ -133,15 +144,18 @@ func binaryName() string {
 
 // findBinary walks dir looking for an already-extracted chrome-headless-shell
 // binary, regardless of how the archive it came from nested its contents.
+// It stops at the first match (filepath.SkipAll) and aborts on the first
+// unreadable entry rather than silently continuing.
 func findBinary(dir string) string {
 	name := binaryName()
 	var found string
 	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || found != "" || d == nil {
-			return nil
+		if err != nil {
+			return err
 		}
 		if !d.IsDir() && d.Name() == name {
 			found = path
+			return filepath.SkipAll
 		}
 		return nil
 	})
@@ -156,19 +170,19 @@ func findBinary(dir string) string {
 // failure.
 func platformStringFor(goos, goarch string) (string, error) {
 	switch goos {
-	case "linux":
-		if goarch == "amd64" {
+	case goosLinux:
+		if goarch == goarchAMD64 {
 			return "linux64", nil
 		}
-	case "darwin":
+	case goosDarwin:
 		switch goarch {
-		case "amd64":
+		case goarchAMD64:
 			return "mac-x64", nil
-		case "arm64":
+		case goarchARM64:
 			return "mac-arm64", nil
 		}
-	case "windows":
-		if goarch == "amd64" {
+	case goosWindows:
+		if goarch == goarchAMD64 {
 			return "win64", nil
 		}
 	}
@@ -221,7 +235,7 @@ func downloadAndExtract(ctx context.Context, cache, platform string, progress Pr
 	if err := downloadFile(ctx, downloadURL, zipPath, progress); err != nil {
 		return "", err
 	}
-	defer os.Remove(zipPath)
+	defer func() { _ = os.Remove(zipPath) }()
 
 	notify(progress, "extracting Chrome build...")
 	if err := unzip(zipPath, versionDir); err != nil {
@@ -232,7 +246,7 @@ func downloadAndExtract(ctx context.Context, cache, platform string, progress Pr
 	if path == "" {
 		return "", fmt.Errorf("downloaded archive did not contain %q", binaryName())
 	}
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS != goosWindows {
 		if err := os.Chmod(path, 0o755); err != nil {
 			return "", err
 		}
@@ -250,7 +264,7 @@ func fetchManifest(ctx context.Context) (*versionManifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetching version manifest: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetching version manifest: unexpected status %s", resp.Status)
 	}
@@ -271,7 +285,7 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 	if err != nil {
 		return fmt.Errorf("downloading %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("downloading %s: unexpected status %s", url, resp.Status)
 	}
@@ -280,7 +294,7 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	total := resp.ContentLength
 	var written int64
@@ -319,7 +333,7 @@ func unzip(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	destClean := filepath.Clean(dest) + string(os.PathSeparator)
 
@@ -352,7 +366,7 @@ func extractFile(f *zip.File, targetPath string) error {
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	mode := f.Mode()
 	if mode == 0 {
@@ -362,7 +376,7 @@ func extractFile(f *zip.File, targetPath string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, rc)
 	return err

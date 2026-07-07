@@ -42,7 +42,7 @@ func TestDownloadAndExtractIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolved binary does not exist: %v", err)
 	}
-	if info.Mode()&0o111 == 0 && runtime.GOOS != "windows" {
+	if info.Mode()&0o111 == 0 && runtime.GOOS != goosWindows {
 		t.Errorf("resolved binary is not executable: mode=%v", info.Mode())
 	}
 	t.Logf("downloaded Chrome to %s (%d bytes)", path, info.Size())
@@ -54,13 +54,13 @@ func TestPlatformStringFor(t *testing.T) {
 		want         string
 		wantErr      bool
 	}{
-		{"linux", "amd64", "linux64", false},
-		{"linux", "arm64", "", true}, // no Chrome for Testing build published
-		{"darwin", "amd64", "mac-x64", false},
-		{"darwin", "arm64", "mac-arm64", false},
-		{"windows", "amd64", "win64", false},
-		{"windows", "arm64", "", true},
-		{"freebsd", "amd64", "", true},
+		{goosLinux, goarchAMD64, "linux64", false},
+		{goosLinux, goarchARM64, "", true}, // no Chrome for Testing build published
+		{goosDarwin, goarchAMD64, "mac-x64", false},
+		{goosDarwin, goarchARM64, "mac-arm64", false},
+		{goosWindows, goarchAMD64, "win64", false},
+		{goosWindows, goarchARM64, "", true},
+		{"freebsd", goarchAMD64, "", true},
 	}
 
 	for _, tt := range tests {
