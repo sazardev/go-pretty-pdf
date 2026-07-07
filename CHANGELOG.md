@@ -69,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Google Fonts (`fonts.google_fonts`) require explicit `allow_network_fonts: true` — network access remains blocked by default during headless Chrome rendering
 
+## [0.3.0] - 2026-07-06
+
 ### Added
 
 - `WithFullConfig(cfg)` option: applies the entire `config.Config` struct (source, output, title, subtitle, author, CSS/template, theme, vars, render settings) in a single call
@@ -94,7 +96,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Network access blocked by default** during headless Chrome rendering: prevents SSRF/exfiltration from untrusted MDX content via `<script>`, `<img>`, `<link>`, etc.
 - Detailed trust model documented across `README.md`, `SECURITY.md`, and `doc.go`
 
-## [0.2.0] - 2026-07-02
+## [0.2.1] - 2026-07-03
+
+### Fixed
+
+- **Data URI corruption**: switched from `url.QueryEscape` to base64 encoding for the HTML data URI passed to Chrome — `QueryEscape` converts spaces to `+`, which Chrome does not decode in data URIs, so every space in rendered text showed up as a literal `+`
+
+## [0.2.0] - 2026-07-03
 
 ### Added
 
@@ -155,7 +163,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI (lint, test, vet, build on 3 OS) and release pipeline (goreleaser)
 - Local Makefile with lint, test, build, and release-dry-run targets
 
+[0.5.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.5.0
 [0.4.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.4.0
 [0.3.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.3.0
+[0.2.1]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.2.1
 [0.2.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.2.0
 [0.1.0]: https://github.com/sazardev/go-pretty-pdf/releases/tag/v0.1.0
