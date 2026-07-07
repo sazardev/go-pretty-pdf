@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/sazardev/go-pretty-pdf/theme"
@@ -39,22 +38,15 @@ var siteThemeVarNames = []string{
 	varFontHeading, varFontBody, varFontCode,
 }
 
-// pdfVarRe matches a CSS custom property *declaration* (e.g.
-// `--pdf-accent: #4a6cf7;`), not a usage (`var(--pdf-accent, ...)` doesn't
-// match: there's no colon right after the name there).
-var pdfVarRe = regexp.MustCompile(`--pdf-([a-z0-9-]+):\s*([^;]+);`)
-
 // extractThemeVars reads every --pdf-* declaration out of a builtin
 // theme's raw CSS (which is always exactly what ships in the actual PDF
 // output). This is how the docs site derives its color/font palette
 // instead of hand-copying hex codes that can drift from what the CLI
 // actually renders — see the "azul incoherente" bug this replaced.
+// (Shared with render.RenderToPDF, which uses the same parser to color
+// the native PDF header/footer to match the page.)
 func extractThemeVars(css string) map[string]string {
-	vars := make(map[string]string)
-	for _, m := range pdfVarRe.FindAllStringSubmatch(css, -1) {
-		vars[m[1]] = strings.TrimSpace(m[2])
-	}
-	return vars
+	return theme.ExtractCSSVars(css)
 }
 
 // themeCSSBlock renders the [data-site-theme="X"] { --site-*: ...; } block

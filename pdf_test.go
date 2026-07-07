@@ -322,6 +322,39 @@ func TestWithFullConfig(t *testing.T) {
 	}
 }
 
+// TestWithFullConfigExplicitZeroMargin guards against a real regression:
+// WithFullConfig used to detect "was a margin configured?" by checking
+// whether the *parsed* value was non-zero, which made an explicit
+// `margin_top: "0mm"` indistinguishable from the field being absent from
+// the YAML entirely — a config asking for a true full-bleed page (0
+// margin on every side, e.g. for a dark theme) silently got the default
+// margins instead. Margins must be gated on the *string* field being
+// non-empty, not on the parsed value being non-zero.
+func TestWithFullConfigExplicitZeroMargin(t *testing.T) {
+	const zeroMargin = "0mm"
+	cfg := &config.Config{
+		Source: testSourceDir,
+		Render: config.RenderConfig{
+			MarginTop:   zeroMargin,
+			MarginBot:   zeroMargin,
+			MarginLeft:  zeroMargin,
+			MarginRight: zeroMargin,
+		},
+	}
+
+	p, err := New(WithFullConfig(cfg))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.renderOpts.MarginTop != 0 || p.renderOpts.MarginBottom != 0 ||
+		p.renderOpts.MarginLeft != 0 || p.renderOpts.MarginRight != 0 {
+		t.Errorf(
+			"explicit margin_*: \"0mm\" in config should zero every margin, got top=%v bottom=%v left=%v right=%v",
+			p.renderOpts.MarginTop, p.renderOpts.MarginBottom, p.renderOpts.MarginLeft, p.renderOpts.MarginRight,
+		)
+	}
+}
+
 func TestPDFParseDirAndComposeHTML(t *testing.T) {
 	dir := t.TempDir()
 	writeFixtureMDX(t, dir, "a.mdx", "[1.0.0]", "Chapter One")

@@ -29,7 +29,15 @@
 
 @page {
   size: A4;
-  margin: 20mm 15mm 20mm 15mm;
+  /* No margin property here, deliberately — not even 0. Empirically, this
+     Chromium version honors an @page margin (any value, including 0) over
+     whatever Page.printToPDF's marginTop/Bottom/Left/Right requested, so
+     declaring one here — at any value — silently made margin_top/
+     margin_bottom/etc. from render.Options or go-pretty-pdf.yml have no
+     effect at all. The imperative printToPDF margins are the single
+     source of truth for page margins (see render.RenderToPDF and
+     pdf.go's WithFullConfig); leaving this property out entirely is what
+     lets them actually apply. */
 }
 
 * {
@@ -47,6 +55,15 @@ body {
   color: var(--pdf-text, #1a1a1a);
   orphans: 3;
   widows: 3;
+  /* Left/right reading margin lives here instead of on @page/printToPDF's
+     side margins, so --pdf-bg still paints all the way to the page edge —
+     see the printToPDF margin comment above. Top/bottom intentionally
+     stay off this rule: <body> is one continuous box fragmented across
+     pages, and per the CSS Fragmentation spec, padding-top/bottom on a
+     fragmented box only applies to its first/last fragment — not to every
+     page. Vertical breathing room has to come from the (per-page,
+     repeating) native margin instead. */
+  padding: 0 15mm;
 }
 
 h1, h2, h3, h4, h5 {
@@ -58,7 +75,7 @@ h1, h2, h3, h4, h5 {
 
 h1 {
   font-size: 18pt;
-  margin-top: 0;
+  margin-top: 0.35in;
   page-break-before: always;
   break-before: page;
 }

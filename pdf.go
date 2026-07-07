@@ -24,6 +24,7 @@ type PDF struct {
 	verbose         bool
 	pendingWarnings []string
 	headerTitleSet  bool
+	lastAudit       *render.AuditReport
 }
 
 type ComposeOptions = compose.Options
@@ -310,28 +311,23 @@ func WithFullConfig(cfg *config.Config) Option {
 			p.renderOpts.PaperHeight = h
 		}
 
-		defOpts := render.DefaultOptions()
-		mt := config.ParseCSSUnit(cfg.Render.MarginTop)
-		mb := config.ParseCSSUnit(cfg.Render.MarginBot)
-		ml := config.ParseCSSUnit(cfg.Render.MarginLeft)
-		mr := config.ParseCSSUnit(cfg.Render.MarginRight)
-		if mt != 0 || mb != 0 || ml != 0 || mr != 0 {
-			if mt == 0 {
-				mt = defOpts.MarginTop
-			}
-			if mb == 0 {
-				mb = defOpts.MarginBottom
-			}
-			if ml == 0 {
-				ml = defOpts.MarginLeft
-			}
-			if mr == 0 {
-				mr = defOpts.MarginRight
-			}
-			p.renderOpts.MarginTop = mt
-			p.renderOpts.MarginBottom = mb
-			p.renderOpts.MarginLeft = ml
-			p.renderOpts.MarginRight = mr
+		// Checked per-field on the *string* being non-empty, not on the
+		// parsed value being non-zero: margin_top: "0mm" is a legitimate,
+		// meaningful choice (e.g. for a full-bleed dark theme) and must not
+		// be indistinguishable from "not set in the config file at all".
+		// p.renderOpts already holds render.DefaultOptions() from New(), so
+		// an unset field is simply left at its default.
+		if cfg.Render.MarginTop != "" {
+			p.renderOpts.MarginTop = config.ParseCSSUnit(cfg.Render.MarginTop)
+		}
+		if cfg.Render.MarginBot != "" {
+			p.renderOpts.MarginBottom = config.ParseCSSUnit(cfg.Render.MarginBot)
+		}
+		if cfg.Render.MarginLeft != "" {
+			p.renderOpts.MarginLeft = config.ParseCSSUnit(cfg.Render.MarginLeft)
+		}
+		if cfg.Render.MarginRight != "" {
+			p.renderOpts.MarginRight = config.ParseCSSUnit(cfg.Render.MarginRight)
 		}
 
 		if cfg.Render.HeaderTitle != "" {
@@ -412,9 +408,11 @@ func (p *PDF) Build(ctx context.Context) error {
 	}
 
 	p.logVerbose(fmt.Sprintf("Rendering PDF to %s...", p.outputFile))
-	if err := render.RenderToPDF(html, p.outputFile, p.renderOpts); err != nil {
+	report, err := render.RenderToPDFWithAudit(html, p.outputFile, p.renderOpts)
+	if err != nil {
 		return fmt.Errorf("rendering PDF: %w", err)
 	}
+	p.lastAudit = report
 
 	return nil
 }
@@ -461,7 +459,19 @@ func (p *PDF) ComposeHTML(docs []*mdx.Document) (string, error) {
 }
 
 func (p *PDF) Render(html string) error {
-	return render.RenderToPDF(html, p.outputFile, p.renderOpts)
+	report, err := render.RenderToPDFWithAudit(html, p.outputFile, p.renderOpts)
+	if err != nil {
+		return err
+	}
+	p.lastAudit = report
+	return nil
+}
+
+// LastAudit returns the visual/structural audit report from the most
+// recent Build or Render call, or nil if neither has run yet. See
+// render.AuditReport and render/audit.go for what it checks.
+func (p *PDF) LastAudit() *render.AuditReport {
+	return p.lastAudit
 }
 
 func (p *PDF) logVerbose(msg string) {

@@ -53,6 +53,9 @@ var legalCSS string
 //go:embed assets/latex.css
 var latexCSS string
 
+//go:embed assets/gruvbox.css
+var gruvboxCSS string
+
 // Builtin theme names, usable with Get/ResolveByName and as extends: values
 // in custom theme YAML.
 const (
@@ -72,6 +75,7 @@ const (
 	NameResume     = "resume"
 	NameLegal      = "legal"
 	NameLatex      = "latex"
+	NameGruvbox    = "gruvbox"
 )
 
 const (
@@ -100,6 +104,7 @@ var order = []string{
 	NameCorporate, NameDark, NameAcademic, NameEditorial,
 	NameSepia, NameTerminal, NameBlueprint,
 	NameIvy, NameGovernment, NameResume, NameLegal, NameLatex,
+	NameGruvbox,
 }
 
 var registry = map[string]Theme{
@@ -222,6 +227,14 @@ var registry = map[string]Theme{
 		Category:    categoryAcademic,
 		CSS:         latexCSS,
 		Sections:    allSectionsOn,
+	},
+	NameGruvbox: {
+		Name:        NameGruvbox,
+		Description: "Retro warm dark palette inspired by the popular Gruvbox editor theme.",
+		Category:    categoryTechnical,
+		CSS:         gruvboxCSS,
+		Sections:    allSectionsOn,
+		Accented:    true,
 	},
 }
 

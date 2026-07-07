@@ -76,7 +76,22 @@ The `build` command runs through these stages:
 1. **Parse** — Read and parse all MDX files in the source directory
 2. **Validate** — Check frontmatter, duplicate IDs, heading depth, content warnings
 3. **Compose** — Assemble HTML with TOC, cover page, and embedded CSS/template
-4. **Render** — Generate PDF via headless Chrome
+4. **Render** — Generate PDF via headless Chrome, then run an automatic quality audit on it
+
+#### PDF Quality Audit
+
+Right after rendering, `build` runs a best-effort audit of the composed document and reports anything worth a second look — it never fails the build, it's advisory. The final summary's `Warnings` count reflects this (and `--json`'s `warnings` array lists them in full). Checks:
+
+| Check | Flags |
+|---|---|
+| `overflow-x` | Content wider than its box (long code lines, wide tables/images) that print will clip instead of wrap |
+| `broken-image` | An `<img>` that never resolved to real pixels |
+| `empty-content` | The document has almost no visible text — usually a sign composition silently produced nothing |
+| `low-contrast` | Visible text whose color is too close to its effective background to read comfortably |
+| `heading-clip-risk` | A heading that forces a page break without enough top margin to clear the print engine's header/margin strip, so its top would render clipped |
+| `page-count` | The generated PDF has no detectable pages — the output file may be empty or corrupt |
+
+The audit reads the composed HTML before it's handed to the print engine, so it can't see two things that live purely inside Chrome's own print pipeline: the fixed ~0.2in header/footer inset and the actual page-break slicing (both covered by `base.css`'s own layout rules instead — see the CHANGELOG for the bugs those rules exist to prevent).
 
 #### Pre-flight Checks
 
@@ -312,11 +327,17 @@ render:
 | `margin_right` | `""` | Right margin as CSS unit |
 | `header_title` | `""` | Header title in rendered PDF |
 
+For a full-bleed page (a dark theme's background reaching every edge, no
+white border), set all four margins to `0mm`/`0in` and disable the header
+and page numbers (`theme_options.sections.header`/`page_numbers: false`,
+or `--no-header --no-page-numbers`) — Chrome reserves a small fixed strip
+for the header/footer that can't otherwise be removed.
+
 ---
 
 ## Themes
 
-Sixteen built-in themes are available, each a palette/typography layer over a
+Seventeen built-in themes are available, each a palette/typography layer over a
 shared structural stylesheet (`theme/assets/base.css`):
 
 | Theme | Category | Description |
@@ -337,6 +358,7 @@ shared structural stylesheet (`theme/assets/base.css`):
 | `resume` | resume | Clean, ATS-friendly sans-serif for CVs and one-pagers — no cover or TOC. |
 | `legal` | formal | Stark, formal brief style: black ink, no color as decoration. |
 | `latex` | academic | Mathematical/scientific paper look with automatic section numbering. |
+| `gruvbox` | technical | Retro warm dark palette inspired by the popular Gruvbox editor theme. |
 
 Run `pretty-pdf theme list` to see this list plus any custom themes, and
 `pretty-pdf theme show <name>` to print a theme's final resolved CSS.

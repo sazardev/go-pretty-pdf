@@ -1,6 +1,8 @@
 package theme
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -25,6 +27,66 @@ func TestGetAndList(t *testing.T) {
 	if t2, ok := Get(NameDark); !ok || t2.Name != NameDark {
 		t.Errorf("expected Get(%q) to return the dark theme, got %+v, %v", NameDark, t2, ok)
 	}
+}
+
+// TestBaseCSSPageRuleHasNoMargin guards a real regression: this Chromium
+// version honors an @page { margin: ... } rule — even "margin: 0" — over
+// whatever render.RenderToPDF's Page.printToPDF marginTop/Bottom/Left
+// /Right requested, silently making custom margins (render.Options or
+// go-pretty-pdf.yml's render.margin_*) have no effect at all. The
+// imperative printToPDF margins must stay the single source of truth for
+// page margins, which only holds if @page never declares one.
+func TestBaseCSSPageRuleHasNoMargin(t *testing.T) {
+	pageRule := regexpMustFind(t, `@page\s*{[^}]*}`, baseCSS)
+	withoutComments := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(pageRule, "")
+	if strings.Contains(withoutComments, "margin") {
+		t.Errorf("base.css's @page rule must not declare margin (silently overrides Page.printToPDF's margin parameters): %s", pageRule)
+	}
+}
+
+// TestBaseCSSH1HasTopMarginBuffer guards a real regression: chrome-headless-shell
+// clips the first ~0.3in of any element flush against a forced page break
+// (margin-top: 0) whenever header/footer templates are displayed — the
+// glyphs render partly inside the unreliable margin/header strip and get
+// sliced off, while the same heading renders perfectly with
+// --no-header --no-page-numbers, or when it's not the first thing on a
+// fresh page. h1 (every chapter title and ".toc h1") must keep a top
+// margin comfortably larger than that dead zone so its text always clears
+// it, on every theme (none of which override h1's margin-top).
+func TestBaseCSSH1HasTopMarginBuffer(t *testing.T) {
+	h1Rule := regexpMustFind(t, `(?:^|\n)h1\s*{[^}]*}`, baseCSS)
+	m := regexp.MustCompile(`margin-top:\s*([\d.]+)(in|pt|mm)`).FindStringSubmatch(h1Rule)
+	if m == nil {
+		t.Fatalf("base.css's h1 rule must declare an explicit margin-top buffer, got: %s", h1Rule)
+	}
+	val, unit := m[1], m[2]
+	f, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		t.Fatalf("could not parse h1 margin-top value %q: %v", val, err)
+	}
+	var inches float64
+	switch unit {
+	case "in":
+		inches = f
+	case "pt":
+		inches = f / 72
+	case "mm":
+		inches = f / 25.4
+	}
+	const minBufferIn = 0.3 // empirically measured dead-zone size; keep a safety margin above it
+	if inches < minBufferIn {
+		t.Errorf("h1's margin-top (%s%s = %.3fin) is smaller than the empirically measured header dead zone (%.2fin) — chapter titles will render clipped when a header/page-numbers are shown", val, unit, inches, minBufferIn)
+	}
+}
+
+func regexpMustFind(t *testing.T, pattern, s string) string {
+	t.Helper()
+	re := regexp.MustCompile("(?s)" + pattern)
+	m := re.FindString(s)
+	if m == "" {
+		t.Fatalf("pattern %q not found in base.css", pattern)
+	}
+	return m
 }
 
 func TestResolveIncludesBaseAndThemeCSS(t *testing.T) {

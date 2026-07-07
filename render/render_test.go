@@ -32,6 +32,33 @@ func TestDefaultOptions(t *testing.T) {
 	if !opts.ShowHeader {
 		t.Error("expected ShowHeader to default to true")
 	}
+	// Left/right must stay 0: that's what lets a dark theme's background
+	// bleed to the physical page edge instead of leaving a white gutter
+	// Chrome's print margin never paints (see pageChrome/base.css).
+	if opts.MarginLeft != 0 || opts.MarginRight != 0 {
+		t.Errorf("expected zero left/right margin for edge-to-edge background, got left=%v right=%v", opts.MarginLeft, opts.MarginRight)
+	}
+	if opts.MarginTop <= 0 || opts.MarginBottom <= 0 {
+		t.Error("expected a positive top/bottom margin — it's the only space the header/footer template can render into")
+	}
+}
+
+func TestPageChrome(t *testing.T) {
+	bg, muted := pageChrome(`<style>:root{--pdf-bg:#282828;--pdf-muted:#a89984;}</style>`)
+	if bg != "#282828" {
+		t.Errorf("pageChrome() bg = %q, want #282828", bg)
+	}
+	if muted != "#a89984" {
+		t.Errorf("pageChrome() muted = %q, want #a89984", muted)
+	}
+
+	// No theme vars at all (e.g. a raw hand-written CSS file) must fall
+	// back to legible light-theme defaults, not empty strings that would
+	// produce a broken "color:;" declaration in the header/footer style.
+	bg, muted = pageChrome(`<style>body{color:black;}</style>`)
+	if bg == "" || muted == "" {
+		t.Errorf("pageChrome() with no --pdf- vars returned empty values: bg=%q muted=%q", bg, muted)
+	}
 }
 
 func TestRenderToPDFPageNumbersAndHeaderDisabled(t *testing.T) {

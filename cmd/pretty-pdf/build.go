@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -127,16 +128,40 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		themeLabel = defaultTheme
 	}
 
+	audit := pdf.LastAudit()
+
 	output.PrintBuildSummary(output.BuildStats{
 		Documents: len(docs),
 		Output:    cfg.Output,
 		FileSize:  fileSize,
 		Duration:  elapsed,
 		Theme:     themeLabel,
-		Warnings:  0,
+		Warnings:  len(audit.Issues),
 	})
 
+	if audit.HasIssues() {
+		fmt.Println()
+		fmt.Println("  " + output.MutedStyle.Render("PDF quality checks flagged:"))
+		for _, issue := range audit.Issues {
+			fmt.Printf("    %s %s\n", output.Warn("["+issue.Check+"]"), issue.Message)
+		}
+	}
+
 	return nil
+}
+
+type buildJSONWarning struct {
+	Check   string `json:"check"`
+	Message string `json:"message"`
+}
+
+type buildJSONResult struct {
+	Documents  int                `json:"documents"`
+	Output     string             `json:"output"`
+	SizeBytes  int64              `json:"size_bytes"`
+	DurationMs int64              `json:"duration_ms"`
+	Theme      string             `json:"theme"`
+	Warnings   []buildJSONWarning `json:"warnings"`
 }
 
 func runBuildJSON(cmd *cobra.Command) error {
@@ -179,18 +204,34 @@ func runBuildJSON(cmd *cobra.Command) error {
 		return fmt.Errorf("composing HTML: %w", err)
 	}
 
-	if err := pdf.Render(html); err != nil {
+	if err = pdf.Render(html); err != nil {
 		return fmt.Errorf("rendering PDF: %w", err)
 	}
 
 	elapsed := time.Since(startTime)
-	fileSize := "0"
-	if info, err := os.Stat(cfg.Output); err == nil {
-		fileSize = fmt.Sprintf("%d", info.Size())
+	var fileSize int64
+	if info, statErr := os.Stat(cfg.Output); statErr == nil {
+		fileSize = info.Size()
 	}
 
-	fmt.Printf(`{"documents":%d,"output":"%s","size_bytes":%s,"duration_ms":%d,"theme":"%s"}`+"\n",
-		len(docs), filepath.ToSlash(cfg.Output), fileSize, elapsed.Milliseconds(), cfg.Theme)
+	audit := pdf.LastAudit()
+	warnings := make([]buildJSONWarning, 0, len(audit.Issues))
+	for _, issue := range audit.Issues {
+		warnings = append(warnings, buildJSONWarning{Check: issue.Check, Message: issue.Message})
+	}
+
+	out, err := json.Marshal(buildJSONResult{
+		Documents:  len(docs),
+		Output:     filepath.ToSlash(cfg.Output),
+		SizeBytes:  fileSize,
+		DurationMs: elapsed.Milliseconds(),
+		Theme:      cfg.Theme,
+		Warnings:   warnings,
+	})
+	if err != nil {
+		return fmt.Errorf("encoding JSON result: %w", err)
+	}
+	fmt.Println(string(out))
 
 	return nil
 }

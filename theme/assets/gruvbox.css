@@ -1,0 +1,56 @@
+/* gruvbox — retro warm dark palette inspired by the popular Gruvbox editor theme. */
+
+:root {
+  --pdf-primary: #ebdbb2;
+  --pdf-accent: #fe8019;
+  --pdf-text: #ebdbb2;
+  --pdf-muted: #a89984;
+  --pdf-bg: #282828;
+  --pdf-surface: #3c3836;
+  --pdf-surface-2: #32302f;
+  --pdf-border: #504945;
+  --pdf-info: #83a598;
+  --pdf-warn: #fabd2f;
+  --pdf-success: #b8bb26;
+  --pdf-font-heading: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  --pdf-font-body: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  --pdf-font-code: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--pdf-primary, #ebdbb2);
+}
+
+h1 {
+  border-bottom: 3px solid var(--pdf-accent, #fe8019);
+}
+
+a {
+  text-decoration: underline;
+}
+
+.cover {
+  border-left: 8px solid var(--pdf-accent, #fe8019);
+  padding-left: 24pt;
+}
+
+.cover h1::before {
+  content: "» ";
+  color: var(--pdf-accent, #fe8019);
+}
+
+th {
+  color: var(--pdf-primary, #ebdbb2);
+}
+
+.toc a {
+  color: var(--pdf-text, #ebdbb2);
+}
+
+.toc a:hover {
+  color: var(--pdf-accent, #fe8019);
+}
+
+.metadata {
+  color: var(--pdf-muted, #a89984);
+}

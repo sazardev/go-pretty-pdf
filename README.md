@@ -84,7 +84,7 @@ MDX files → Parse frontmatter & markdown → Transpile components → Compose 
 1. **Parse** — goldmark parses MDX files with YAML frontmatter
 2. **Transpile** — custom components (`<DeepDive>`, `<Warning>`, `<Axiom>`) become styled HTML
 3. **Compose** — HTML assembled with embedded template + CSS + auto-generated Table of Contents
-4. **Render** — headless Chrome prints to PDF with headers, footers, and PDF bookmarks
+4. **Render** — headless Chrome prints to PDF with headers, footers, and PDF bookmarks, then an automatic quality audit checks the result for overflowing content, broken images, low-contrast text, near-empty output, and headings at risk of being clipped by the print engine (see `pretty-pdf build`'s `Warnings` output, or `render.RenderToPDFWithAudit` in the library API)
 
 Documents are sorted by their `[X.Y.Z]` frontmatter ID, not filename.
 
@@ -191,8 +191,14 @@ errs := pdf.ValidateDoc(doc)
 html, _ := pdf.ComposeHTML(docs)
 pdf.Render(html)
 
+// Quality audit from the most recent Build/Render call (nil if neither ran yet)
+audit := pdf.LastAudit()
+
 // Validation-only
 errs, _ := pdf.Validate(ctx)
+
+// Lower-level: render straight to PDF and get the audit report back
+report, err := render.RenderToPDFWithAudit(html, "out.pdf", render.DefaultOptions())
 ```
 
 ### Available options
@@ -223,11 +229,11 @@ errs, _ := pdf.Validate(ctx)
 
 ## Themes
 
-Sixteen built-in themes, each a palette/typography layer over one shared
+Seventeen built-in themes, each a palette/typography layer over one shared
 structural stylesheet — clean and professional by default, easy to
 customize without writing CSS, and extendable with your own custom themes:
 
-`default` &middot; `minimal` &middot; `modern` &middot; `classic` &middot; `corporate` &middot; `dark` &middot; `academic` &middot; `editorial` &middot; `sepia` &middot; `terminal` &middot; `blueprint` &middot; `ivy` &middot; `government` &middot; `resume` &middot; `legal` &middot; `latex`
+`default` &middot; `minimal` &middot; `modern` &middot; `classic` &middot; `corporate` &middot; `dark` &middot; `academic` &middot; `editorial` &middot; `sepia` &middot; `terminal` &middot; `blueprint` &middot; `ivy` &middot; `government` &middot; `resume` &middot; `legal` &middot; `latex` &middot; `gruvbox`
 
 ```bash
 # Pick a theme, tweak colors/fonts/density, drop sections you don't want
