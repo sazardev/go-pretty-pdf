@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`build` silently failed on large books with `chromedp render: page load error net::ERR_ABORTED`**: rendering navigated Chrome to a `data:text/html;charset=utf-8;base64,...` URI holding the entire composed document, which Chrome (via chromedp/CDP's `Page.navigate`) aborts once the encoded payload crosses roughly 2MB — with no message indicating size was the cause. A book with a few hundred thousand words of prose and code crosses that threshold easily. Rendering now writes the composed HTML to a temporary file and navigates to it via a `file://` URL instead (removed once the page is captured), which has no such ceiling; the existing default-network-blocking behavior (`NetworkAccess: false` still blocks external `http(s)://` resources) is unaffected. No public API changed. New regression test `TestRenderToPDFLargeDocumentPastOldDataURILimit` generates a document past the old limit and confirms it renders.
+
 ## [0.7.0] - 2026-07-07
 
 ### Added

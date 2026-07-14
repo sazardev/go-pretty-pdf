@@ -1,8 +1,10 @@
 package render
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -126,7 +128,7 @@ func TestRenderToPDFNetworkBlockedByDefaultStillRenders(t *testing.T) {
 
 	// Content that would trigger an outbound request if network access
 	// were allowed; with NetworkAccess left at its default (false), this
-	// must still render successfully from the self-contained data URI.
+	// must still render successfully.
 	html := `<html><body><img src="https://example.invalid/nonexistent.png"><h1>Local content</h1></body></html>`
 	opts := DefaultOptions()
 
@@ -136,5 +138,63 @@ func TestRenderToPDFNetworkBlockedByDefaultStillRenders(t *testing.T) {
 	info, err := os.Stat(outPath)
 	if err != nil || info.Size() == 0 {
 		t.Fatal("expected a non-empty PDF despite the blocked remote image")
+	}
+}
+
+func TestNavigationURLForReturnsFileURLAndCleansUp(t *testing.T) {
+	navURL, cleanup, err := navigationURLFor("<html><body>hi</body></html>")
+	if err != nil {
+		t.Fatalf("navigationURLFor: %v", err)
+	}
+	if !strings.HasPrefix(navURL, "file://") {
+		t.Errorf("expected a file:// URL, got %q", navURL)
+	}
+
+	path := strings.TrimPrefix(navURL, "file://")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected temp html file to exist at %q: %v", path, err)
+	}
+
+	cleanup()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("expected cleanup() to remove the temp file, stat err = %v", err)
+	}
+}
+
+// TestRenderToPDFLargeDocumentPastOldDataURILimit is a regression test for
+// a real bug: this package used to navigate Chrome to a
+// "data:text/html;base64,..." URI, which silently fails
+// ("net::ERR_ABORTED") once the encoded payload crosses roughly 2MB. A
+// book-length document (hundreds of thousands of words of prose and code)
+// crosses that threshold easily. This generates content well past the old
+// limit and confirms it still renders — the fix (navigating to a temp
+// file via file://) has no such ceiling.
+func TestRenderToPDFLargeDocumentPastOldDataURILimit(t *testing.T) {
+	requireChrome(t)
+
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "out.pdf")
+
+	var body strings.Builder
+	body.WriteString("<html><body>")
+	// ~120 bytes per paragraph * ~30000 = ~3.6MB of raw HTML, comfortably
+	// past the ~2MB (post-base64) size that used to break data URI
+	// navigation, even before base64's own ~33% size inflation is applied.
+	for i := 0; i < 30000; i++ {
+		fmt.Fprintf(&body, "<p>Paragraph number %d with some filler text to pad it out a bit.</p>", i)
+	}
+	body.WriteString("</body></html>")
+	html := body.String()
+
+	if len(html) < 2*1024*1024 {
+		t.Fatalf("test fixture too small to exercise the old data URI limit: %d bytes", len(html))
+	}
+
+	if err := RenderToPDF(html, outPath, DefaultOptions()); err != nil {
+		t.Fatalf("expected large document to render successfully, got: %v", err)
+	}
+	info, err := os.Stat(outPath)
+	if err != nil || info.Size() == 0 {
+		t.Fatal("expected a non-empty PDF for the large document")
 	}
 }
