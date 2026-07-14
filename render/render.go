@@ -2,8 +2,8 @@ package render
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -65,6 +65,51 @@ func DefaultOptions() Options {
 	}
 }
 
+// navigationURLFor writes htmlContent to a temporary file and returns a
+// file:// URL pointing at it, along with a cleanup func that removes the
+// file once the caller is done navigating to it.
+//
+// This used to be a "data:text/html;charset=utf-8;base64,..." URI instead
+// of a temp file. That worked for small-to-medium books, but Chrome (at
+// least via chromedp/CDP's Page.navigate) silently aborts navigation to a
+// data: URI once the encoded payload crosses roughly 2MB ("chromedp
+// render: page load error net::ERR_ABORTED"), with no indication that
+// size is the cause. A book with a few hundred thousand words of prose
+// and code easily produces a composed HTML document past that threshold.
+// Writing to a real file sidesteps the limit entirely and has no
+// practical downside: it's still a local, sandboxed, single-use file,
+// cleaned up immediately after the page is captured.
+func navigationURLFor(htmlContent string) (navURL string, cleanup func(), err error) {
+	tmpFile, err := os.CreateTemp("", "go-pretty-pdf-*.html")
+	if err != nil {
+		return "", nil, fmt.Errorf("creating temp html file: %w", err)
+	}
+
+	cleanup = func() { _ = os.Remove(tmpFile.Name()) }
+
+	if _, writeErr := tmpFile.WriteString(htmlContent); writeErr != nil {
+		_ = tmpFile.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("writing temp html file: %w", writeErr)
+	}
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("closing temp html file: %w", closeErr)
+	}
+
+	absPath, err := filepath.Abs(tmpFile.Name())
+	if err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("resolving temp html file path: %w", err)
+	}
+
+	// url.URL's own String() method takes care of platform differences in
+	// file URL formatting (e.g. the extra leading slash before a Windows
+	// drive letter, "file:///C:/...") rather than hand-building the string.
+	fileURL := &url.URL{Scheme: "file", Path: filepath.ToSlash(absPath)}
+	return fileURL.String(), cleanup, nil
+}
+
 // RenderToPDF composes htmlContent into a PDF at outputPath. It never
 // returns audit findings — use RenderToPDFWithAudit for that — but always
 // keeps this signature exactly as-is for API stability.
@@ -103,8 +148,11 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 	ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 	defer cancel()
 
-	encoded := base64.StdEncoding.EncodeToString([]byte(htmlContent))
-	dataURI := "data:text/html;charset=utf-8;base64," + encoded
+	navURL, cleanup, err := navigationURLFor(htmlContent)
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
 
 	// Chrome renders the header/footer template inside the top/bottom
 	// margin strip it was given — a strip that's otherwise always blank
@@ -186,7 +234,7 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 	needsHeaderFooter := opts.ShowHeader || opts.PageNumbers
 
 	tasks = append(tasks,
-		chromedp.Navigate(dataURI),
+		chromedp.Navigate(navURL),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			// Runs against the fully-loaded document, before PrintToPDF
 			// hands it to Chrome's print engine — see audit.go for what it
