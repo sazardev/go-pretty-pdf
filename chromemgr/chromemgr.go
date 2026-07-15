@@ -351,6 +351,12 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 		if gotMD5 := hasher.Sum(nil); !equalDigest(gotMD5, wantMD5) {
 			return fmt.Errorf("downloaded file %s failed integrity check (checksum mismatch) — possible corrupted or tampered download", url)
 		}
+	} else {
+		// Not fatal — GCS omits X-Goog-Hash in some configurations — but
+		// worth surfacing since the file downloaded here is about to be
+		// chmod +x'd and executed with no integrity check at all in that
+		// case.
+		notify(progress, fmt.Sprintf("warning: no MD5 checksum available for %s, skipping integrity check", url))
 	}
 	return nil
 }

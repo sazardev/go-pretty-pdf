@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/chromedp/cdproto/network"
@@ -327,15 +328,33 @@ func RenderToPDFWithAuditContext(ctx context.Context, htmlContent string, output
 	return report, nil
 }
 
+// styleBlockRe extracts the content of the first <style>...</style> element
+// in a composed document, so pageChrome only ever looks at actual CSS.
+var styleBlockRe = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+
 // pageChrome pulls the page background and muted-text colors out of the
-// composed document's own CSS, so the native header/footer strip can be
-// painted to match whatever theme is active instead of hardcoded
+// composed document's own <style> block, so the native header/footer strip
+// can be painted to match whatever theme is active instead of hardcoded
 // white/gray. Falls back to sensible light-theme defaults if a theme
 // doesn't declare one (shouldn't happen for any builtin theme — see
 // theme.TestBuiltinThemesProduceSiteVars — but custom/raw CSS files are
 // user-authored and may omit either).
+//
+// htmlContent is the *entire* composed document — cover, TOC, and every
+// chapter's rendered HTML — not just its CSS, so vars are extracted from
+// the <style> block specifically rather than passed to
+// theme.ExtractCSSVars wholesale. That regex matches a `--pdf-x: value;`
+// declaration wherever it textually appears, with no notion of HTML
+// structure; running it over the full document would let a chapter that
+// merely *mentions* that syntax (e.g. a code sample documenting theme
+// variables) silently override the real theme's header/footer colors.
 func pageChrome(htmlContent string) (bg, mutedText string) {
-	vars := theme.ExtractCSSVars(htmlContent)
+	css := htmlContent
+	if m := styleBlockRe.FindStringSubmatch(htmlContent); m != nil {
+		css = m[1]
+	}
+
+	vars := theme.ExtractCSSVars(css)
 	bg = vars["bg"]
 	if bg == "" {
 		bg = "#ffffff"

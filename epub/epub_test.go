@@ -306,6 +306,51 @@ func TestWriteRejectsUnsupportedCoverFormat(t *testing.T) {
 	}
 }
 
+// TestWriteFailureDoesNotClobberExistingOutput checks two things: that a
+// failed rebuild leaves a previously-written, valid output file untouched
+// rather than truncated, and that Write's temp-file-then-rename mechanism
+// (see the os.CreateTemp/os.Rename dance in Write) leaves no stray
+// "out.epub.tmp-*" file behind. Write used to open outputPath directly with
+// os.Create, which truncates it immediately — any failure after that point
+// (mid-archive, not just this early cover-format check) would have
+// destroyed a previously good EPUB.
+func TestWriteFailureDoesNotClobberExistingOutput(t *testing.T) {
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "out.epub")
+
+	goodDoc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "One", "# One")
+	if err := Write([]*mdx.Document{goodDoc}, DefaultOptions(), outPath); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	want, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("reading previously-written output: %v", err)
+	}
+
+	badCover := filepath.Join(dir, "cover.bmp")
+	if writeErr := os.WriteFile(badCover, []byte("not an image"), 0644); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	opts := DefaultOptions()
+	opts.CoverImage = badCover
+	if writeErr := Write([]*mdx.Document{goodDoc}, opts, outPath); writeErr == nil {
+		t.Fatal("expected the second Write to fail on the unsupported cover format")
+	}
+
+	got, err := os.ReadFile(outPath)
+	if err != nil {
+		t.Fatalf("reading output after failed Write: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Error("expected the failed Write to leave the previously-written output untouched")
+	}
+
+	leftovers, _ := filepath.Glob(filepath.Join(dir, "out.epub.tmp-*"))
+	if len(leftovers) != 0 {
+		t.Errorf("expected no leftover temp files, got: %v", leftovers)
+	}
+}
+
 func TestWriteMetadataFields(t *testing.T) {
 	dir := t.TempDir()
 	doc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "One", "# One")

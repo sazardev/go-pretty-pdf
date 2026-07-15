@@ -33,6 +33,11 @@ func (r *ComponentRegistry) Register(name string, handler ComponentHandler) {
 	r.handlers[name] = handler
 }
 
+// maxComponentNestingDepth bounds the innermost-first unwinding loop in
+// Transpile (see below) so a pathological input can't spin it forever; any
+// real document nests a handful of components at most.
+const maxComponentNestingDepth = 64
+
 func (r *ComponentRegistry) Transpile(input string) string {
 	r.mu.RLock()
 	handlers := make(map[string]ComponentHandler, len(r.handlers))
@@ -44,23 +49,53 @@ func (r *ComponentRegistry) Transpile(input string) string {
 	result := input
 	for name, handler := range handlers {
 		re := buildComponentRegex(name)
-		result = re.ReplaceAllStringFunc(result, func(match string) string {
+		replace := func(match string) string {
 			matches := re.FindStringSubmatch(match)
-			title := matches[1]
+			attrs := parseComponentAttrs(matches[1])
 			content := strings.TrimSpace(matches[2])
-			attrs := map[string]string{}
-			if title != "" {
-				attrs["title"] = title
-			}
 			return handler(attrs, content)
-		})
+		}
+		// The non-greedy (.*?) below only ever matches a pair with no
+		// nested tag of the *same* name inside it, so on input like
+		// <Warning><Warning>x</Warning></Warning> a single pass matches
+		// only the innermost pair and leaves the outer </Warning> as a
+		// stray literal. Repeating the replacement until no match
+		// remains unwinds one nesting level per pass instead.
+		for i := 0; i < maxComponentNestingDepth && re.MatchString(result); i++ {
+			result = re.ReplaceAllStringFunc(result, replace)
+		}
 	}
 	return result
 }
 
 func buildComponentRegex(name string) *regexp.Regexp {
-	pattern := fmt.Sprintf(`(?s)<%s(?:\s+title="([^"]*)")?\s*>(.*?)</%s>`, name, name)
+	pattern := fmt.Sprintf(`(?s)<%s(?:\s+([^>]*))?\s*>(.*?)</%s>`, name, name)
 	return regexp.MustCompile(pattern)
+}
+
+// componentAttrRe matches a single name="value" or name='value' attribute
+// pair, so component tags aren't limited to the exact literal
+// `title="..."` shape — single-quoted values and any other attributes
+// (ignored by the built-in handlers, but not fatal to parsing) all match.
+// The value itself isn't captured: Go's regexp reports an unmatched group
+// as "" indistinguishably from a group that matched an empty string, so
+// there's no reliable way to tell which quote-style alternative fired from
+// its submatches alone. parseComponentAttrs instead slices the value out of
+// the whole match, which is unambiguous.
+var componentAttrRe = regexp.MustCompile(`[A-Za-z_][\w-]*\s*=\s*(?:"[^"]*"|'[^']*')`)
+
+func parseComponentAttrs(raw string) map[string]string {
+	attrs := map[string]string{}
+	for _, whole := range componentAttrRe.FindAllString(raw, -1) {
+		eq := strings.IndexByte(whole, '=')
+		name := strings.TrimSpace(whole[:eq])
+		value := strings.TrimSpace(whole[eq+1:])
+		if len(value) >= 2 {
+			value = value[1 : len(value)-1] // strip the matching quote pair
+		}
+		attrs[name] = value
+	}
+	return attrs
 }
 
 func deepDiveHandler(attrs map[string]string, inner string) string {

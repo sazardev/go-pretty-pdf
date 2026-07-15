@@ -64,6 +64,23 @@ func TestPageChrome(t *testing.T) {
 	}
 }
 
+// TestPageChromeIgnoresVarsOutsideStyleBlock guards against pageChrome
+// picking up a `--pdf-x: value;`-shaped string from document body content
+// (e.g. a chapter's code sample documenting theme variables) and letting it
+// override the real theme's header/footer colors declared in <style>.
+func TestPageChromeIgnoresVarsOutsideStyleBlock(t *testing.T) {
+	html := `<html><head><style>:root{--pdf-bg:#282828;--pdf-muted:#a89984;}</style></head>` +
+		`<body><pre>--pdf-bg: #ff0000;</pre></body></html>`
+
+	bg, muted := pageChrome(html)
+	if bg != "#282828" {
+		t.Errorf("pageChrome() bg = %q, want #282828 (body content must not override it)", bg)
+	}
+	if muted != "#a89984" {
+		t.Errorf("pageChrome() muted = %q, want #a89984", muted)
+	}
+}
+
 func TestRenderToPDFPageNumbersAndHeaderDisabled(t *testing.T) {
 	requireChrome(t)
 

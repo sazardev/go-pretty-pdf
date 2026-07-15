@@ -215,7 +215,10 @@ func renderCoverXHTML(opts Options, coverFile string) (string, error) {
 		Title:     opts.Title,
 		CoverFile: coverFile,
 	})
-	return buf.String(), err
+	if err != nil {
+		return "", fmt.Errorf("rendering cover: %w", err)
+	}
+	return buf.String(), nil
 }
 
 const navTemplateSrc = `<!DOCTYPE html>
@@ -247,7 +250,10 @@ func renderNavXHTML(opts Options, tree []*navItem) (string, error) {
 		Title: opts.Title,
 		List:  renderNavList(tree),
 	})
-	return buf.String(), err
+	if err != nil {
+		return "", fmt.Errorf("rendering nav: %w", err)
+	}
+	return buf.String(), nil
 }
 
 // xmlEscape escapes s for use inside XML text or attribute content — used

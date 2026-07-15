@@ -39,6 +39,25 @@ func TestComposeHTMLDefault(t *testing.T) {
 	}
 }
 
+func TestComposeHTMLEscapesStyleBlockClose(t *testing.T) {
+	docs := []*mdx.Document{
+		docWithID("[1.0.0]", "Chapter One", "<p>Body</p>"),
+	}
+	opts := DefaultOptions()
+	opts.CSS = `body{color:red}</style><script>alert(1)</script><style>`
+
+	html, err := ComposeHTML(docs, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(html, "</style><script>") {
+		t.Errorf("expected a theme's raw CSS to be unable to break out of the <style> block, got: %.200s...", html)
+	}
+	if !strings.Contains(html, "color:red") {
+		t.Error("expected the legitimate CSS content to survive")
+	}
+}
+
 func TestComposeHTMLEmptyDocs(t *testing.T) {
 	html, err := ComposeHTML(nil, DefaultOptions())
 	if err != nil {

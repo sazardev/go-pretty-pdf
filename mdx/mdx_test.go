@@ -114,6 +114,51 @@ No title here.
 	}
 }
 
+func TestComponentTranspileNested(t *testing.T) {
+	r := NewComponentRegistry()
+
+	input := `<Warning title="Outer"><Warning title="Inner">inner text</Warning> outer text</Warning>`
+
+	result := r.Transpile(input)
+
+	if contains(result, "<Warning") || contains(result, "</Warning>") {
+		t.Errorf("expected no raw Warning tags left over, got: %s", result)
+	}
+	if !contains(result, "inner text") || !contains(result, "outer text") {
+		t.Errorf("expected both inner and outer content preserved, got: %s", result)
+	}
+}
+
+func TestComponentTranspileSingleQuotedTitle(t *testing.T) {
+	r := NewComponentRegistry()
+
+	input := `<Warning title='Heads Up'>Be careful.</Warning>`
+
+	result := r.Transpile(input)
+
+	if !contains(result, "Heads Up") {
+		t.Errorf("expected single-quoted title to be recognized, got: %s", result)
+	}
+	if contains(result, "<Warning") {
+		t.Errorf("expected the tag to be transpiled, got: %s", result)
+	}
+}
+
+func TestComponentTranspileExtraAttributes(t *testing.T) {
+	r := NewComponentRegistry()
+
+	input := `<Warning id="w1" title="Heads Up" data-x="y">Be careful.</Warning>`
+
+	result := r.Transpile(input)
+
+	if !contains(result, "Heads Up") {
+		t.Errorf("expected title to still be recognized alongside other attributes, got: %s", result)
+	}
+	if contains(result, "<Warning") {
+		t.Errorf("expected the tag to be transpiled, got: %s", result)
+	}
+}
+
 func TestCustomComponent(t *testing.T) {
 	r := NewComponentRegistry()
 	r.Register("Callout", func(attrs map[string]string, inner string) string {

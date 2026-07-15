@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -183,6 +184,39 @@ func TestDownloadFileRejectsChecksumMismatch(t *testing.T) {
 	}
 	if _, statErr := os.Stat(dest); statErr == nil {
 		t.Error("expected the corrupted/mismatched download to be removed, but it still exists")
+	}
+}
+
+// TestDownloadFileWarnsWhenNoChecksumAvailable guards against silently
+// skipping the integrity check with no trace at all when GCS doesn't report
+// an MD5 (e.g. behind some proxy/CDN configurations) — the download still
+// succeeds, but progress must be told the check was skipped since the file
+// is about to be chmod +x'd and executed.
+func TestDownloadFileWarnsWhenNoChecksumAvailable(t *testing.T) {
+	content := []byte("fake-chrome-binary-bytes")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(content)
+	}))
+	defer srv.Close()
+
+	var messages []string
+	progress := func(msg string) { messages = append(messages, msg) }
+
+	dest := filepath.Join(t.TempDir(), "out.zip")
+	if err := downloadFile(context.Background(), srv.URL, dest, progress); err != nil {
+		t.Fatalf("downloadFile() error = %v", err)
+	}
+
+	found := false
+	for _, m := range messages {
+		if strings.Contains(m, "no MD5 checksum available") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a warning about the missing checksum, got messages: %v", messages)
 	}
 }
 

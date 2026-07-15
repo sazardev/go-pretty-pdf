@@ -23,6 +23,21 @@ import (
 // native pixel size rather than being rescaled to fit a paper size.
 const coverPxPerIn = 96.0
 
+// maxCoverImageBytes bounds how much of a cover image file coverPDFTasks
+// will read into memory for its data: URI. Nothing about the format
+// validation above limits file size, so an unbounded os.ReadFile here would
+// happily load an arbitrarily large file — worth capping since, unlike the
+// rest of the document, WithCoverImage's path can come from outside the
+// trusted MDX source tree (e.g. a pipeline parameter).
+const maxCoverImageBytes = 32 * 1024 * 1024 // 32MB
+
+// maxCoverImageDimension bounds the pixel width/height coverImageDimensionsIn
+// will accept, since that value is later passed straight through as
+// PrintToPDF's paperWidth/paperHeight with no other limit — an image whose
+// header merely *claims* an enormous size would otherwise reach Chrome as a
+// request to print an enormous page.
+const maxCoverImageDimension = 20000
+
 // coverImageDimensionsIn decodes imagePath's pixel dimensions (without
 // loading the full pixel data) and converts them to inches for use as an
 // exact PrintToPDF paper size.
@@ -46,6 +61,10 @@ func coverImageDimensionsIn(imagePath string) (widthIn, heightIn float64, err er
 	if cfg.Width <= 0 || cfg.Height <= 0 {
 		return 0, 0, fmt.Errorf("cover image %s has no usable dimensions", imagePath)
 	}
+	if cfg.Width > maxCoverImageDimension || cfg.Height > maxCoverImageDimension {
+		return 0, 0, fmt.Errorf("cover image %s is %dx%d px, exceeding the %dx%d px limit",
+			imagePath, cfg.Width, cfg.Height, maxCoverImageDimension, maxCoverImageDimension)
+	}
 
 	return float64(cfg.Width) / coverPxPerIn, float64(cfg.Height) / coverPxPerIn, nil
 }
@@ -67,6 +86,11 @@ func coverImageMIMEType(imagePath string) string {
 // removes the temporary HTML file the tasks navigate to and must be called
 // after that Run completes (defer it right after a nil error check).
 func coverPDFTasks(imagePath string, widthIn, heightIn float64, out *[]byte) (chromedp.Tasks, func(), error) {
+	if info, err := os.Stat(imagePath); err == nil && info.Size() > maxCoverImageBytes {
+		return nil, nil, fmt.Errorf("cover image %s is %d bytes, exceeding the %d byte limit",
+			imagePath, info.Size(), maxCoverImageBytes)
+	}
+
 	imgBytes, err := os.ReadFile(imagePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading cover image: %w", err)

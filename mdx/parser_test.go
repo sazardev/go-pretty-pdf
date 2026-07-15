@@ -177,3 +177,30 @@ title: Good
 		t.Fatal("expected error for the missing file")
 	}
 }
+
+// TestSubstituteVarsDoesNotChainPlaceholders guards against a bug where
+// sequentially replacing one var at a time let one var's value (itself
+// containing another var's {{placeholder}}) get expanded a second time —
+// making the result depend on Go's randomized map iteration order instead
+// of always doing exactly one substitution pass.
+func TestSubstituteVarsDoesNotChainPlaceholders(t *testing.T) {
+	p := NewParser(WithVars(map[string]string{
+		"user":  "{{admin}}",
+		"admin": "SECRET",
+	}))
+
+	for i := 0; i < 20; i++ {
+		got := string(p.substituteVars([]byte("hello {{user}}")))
+		if got != "hello {{admin}}" {
+			t.Fatalf("substituteVars() = %q, want %q (no chaining into other placeholders)", got, "hello {{admin}}")
+		}
+	}
+}
+
+func TestSubstituteVarsReplacesAllOccurrences(t *testing.T) {
+	p := NewParser(WithVars(map[string]string{"name": "Acme"}))
+	got := string(p.substituteVars([]byte("{{name}} and {{name}} again")))
+	if got != "Acme and Acme again" {
+		t.Fatalf("substituteVars() = %q, want %q", got, "Acme and Acme again")
+	}
+}

@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -72,7 +73,7 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 		Subtitle:  opts.Subtitle,
 		Author:    opts.Author,
 		Keywords:  keywords,
-		CSS:       template.CSS(css),
+		CSS:       template.CSS(escapeStyleBlockClose(css)),
 		Body:      template.HTML(bodyBuf.String()),
 		BuiltAt:   time.Now().Format("2006-01-02 15:04:05 UTC"),
 		TotalDocs: len(docs),
@@ -85,6 +86,24 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 	}
 
 	return out.String(), nil
+}
+
+// styleBlockCloseRe matches the literal byte sequence that ends an HTML
+// <style> element per the HTML parsing spec: "</" followed immediately by
+// characters that could start the tag name "style" (case-insensitively),
+// wherever it appears — no closing ">" is even required for the browser's
+// tokenizer to leave raw-text mode. css is marked template.CSS below so
+// html/template inserts it into <style>{{.CSS}}</style> completely
+// unescaped, which is required for legitimate CSS to survive intact — but
+// it also means css itself must never be allowed to contain that sequence,
+// whether it came from a builtin theme, a user-authored .theme.yml's raw
+// `css:` escape hatch, or a --css file. Real CSS has no legitimate use for
+// a literal "</style" substring, so neutralizing it here can't break a
+// well-formed stylesheet.
+var styleBlockCloseRe = regexp.MustCompile(`(?i)</(style)`)
+
+func escapeStyleBlockClose(css string) string {
+	return styleBlockCloseRe.ReplaceAllString(css, `<\/$1`)
 }
 
 type templateData struct {

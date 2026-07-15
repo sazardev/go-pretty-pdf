@@ -110,6 +110,34 @@ func TestCoverImageDimensionsInMissingFile(t *testing.T) {
 	}
 }
 
+func TestCoverImageDimensionsInRejectsOversizedDimensions(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestPNG(t, dir, "huge.png", maxCoverImageDimension+1, 1)
+
+	if _, _, err := coverImageDimensionsIn(path); err == nil {
+		t.Error("expected an error for a cover image exceeding the pixel dimension limit, got nil")
+	}
+}
+
+func TestCoverPDFTasksRejectsOversizedFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "big.png")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("creating fixture: %v", err)
+	}
+	if err := f.Truncate(maxCoverImageBytes + 1); err != nil {
+		t.Fatalf("truncating fixture to size: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("closing fixture: %v", err)
+	}
+
+	if _, _, err := coverPDFTasks(path, 1, 1, new([]byte)); err == nil {
+		t.Error("expected an error for a cover image file exceeding the byte size limit, got nil")
+	}
+}
+
 // TestRenderToPDFWithCoverImageUsesImageDimensions is an end-to-end check
 // that a custom cover image produces a first page sized to the image's own
 // pixel dimensions (a square image gets a square page) while the rest of

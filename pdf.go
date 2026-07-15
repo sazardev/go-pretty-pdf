@@ -23,6 +23,7 @@ type PDF struct {
 	validator       mdx.Validator
 	verbose         bool
 	pendingWarnings []string
+	warnings        []string
 	headerTitleSet  bool
 	lastAudit       *render.AuditReport
 }
@@ -384,17 +385,36 @@ func New(opts ...Option) (*PDF, error) {
 		p.composeOpts.ShowCover = false
 	}
 
-	if p.verbose {
-		for _, w := range p.pendingWarnings {
-			fmt.Fprintf(os.Stderr, "Warning: %s\n", w)
-		}
+	// Always surfaced, not just when verbose: these mark a theme/CSS/
+	// template option that failed to apply and silently fell back to the
+	// previous value, which is worth knowing about regardless of
+	// verbosity level. New() still returns a nil error here — a bad theme
+	// name is intentionally non-fatal (see TestWithThemeNameUnknownWarns)
+	// — but Warnings() lets a caller check programmatically instead of
+	// only scraping stderr.
+	for _, w := range p.pendingWarnings {
+		fmt.Fprintf(os.Stderr, "Warning: %s\n", w)
 	}
+	p.warnings = p.pendingWarnings
 	p.pendingWarnings = nil
 
 	return p, nil
 }
 
+// Warnings returns the non-fatal configuration warnings recorded by New —
+// e.g. an unresolvable theme name or an unreadable --css/--template file —
+// each of which caused that option to fall back rather than apply. They are
+// also printed to stderr by New itself; this accessor exists for callers
+// that want to detect the condition programmatically instead.
+func (p *PDF) Warnings() []string {
+	return p.warnings
+}
+
 func (p *PDF) Build(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if p.verbose {
 		fmt.Printf("Parsing MDX files in %s...\n", p.sourceDir)
 	}
@@ -411,6 +431,10 @@ func (p *PDF) Build(ctx context.Context) error {
 		fmt.Printf("Found %d document(s)\n", len(docs))
 	}
 
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+
 	if p.validator != nil {
 		p.logVerbose("Running validation...")
 		var allErrs []mdx.ValidationError
@@ -425,6 +449,10 @@ func (p *PDF) Build(ctx context.Context) error {
 			return fmt.Errorf("validation failed: %d error(s)", len(allErrs))
 		}
 		p.logVerbose("Validation passed")
+	}
+
+	if err = ctx.Err(); err != nil {
+		return err
 	}
 
 	p.logVerbose("Composing HTML...")
@@ -444,6 +472,10 @@ func (p *PDF) Build(ctx context.Context) error {
 }
 
 func (p *PDF) Validate(ctx context.Context) ([]mdx.ValidationError, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	docs, err := p.parser.ParseDir(p.sourceDir)
 	if err != nil {
 		return nil, err
@@ -453,8 +485,15 @@ func (p *PDF) Validate(ctx context.Context) ([]mdx.ValidationError, error) {
 		return nil, fmt.Errorf("no validator configured")
 	}
 
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	var allErrs []mdx.ValidationError
 	for _, doc := range docs {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		errs := p.validator.Validate(doc)
 		allErrs = append(allErrs, errs...)
 	}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/yuin/goldmark"
 	meta "github.com/yuin/goldmark-meta"
@@ -44,6 +45,7 @@ func (pe ParseErrors) Error() string {
 type Parser struct {
 	md         goldmark.Markdown
 	components *ComponentRegistry
+	varsMu     sync.RWMutex
 	vars       map[string]string
 }
 
@@ -94,6 +96,8 @@ func (p *Parser) RegisterComponent(name string, handler ComponentHandler) {
 }
 
 func (p *Parser) SetVars(vars map[string]string) {
+	p.varsMu.Lock()
+	defer p.varsMu.Unlock()
 	p.vars = vars
 }
 
@@ -199,15 +203,30 @@ func (p *Parser) ParseAll(paths []string) ([]*Document, error) {
 	return docs, nil
 }
 
+// substituteVars replaces every {{key}} placeholder with its configured
+// value in a single pass over raw via strings.Replacer, rather than looping
+// over the vars map and doing a sequential ReplaceAll per key. Two things
+// would otherwise go wrong: map iteration order is randomized in Go, and a
+// sequential ReplaceAll rescans the *already-substituted* text on each
+// iteration, so one var's value can itself contain another var's
+// placeholder and get expanded again — making the result depend on
+// iteration order and change from run to run for identical input. A single
+// Replacer pass finds all matches against the original text and expands
+// each exactly once, so the result is deterministic and placeholders never
+// chain into each other.
 func (p *Parser) substituteVars(raw []byte) []byte {
-	if len(p.vars) == 0 {
+	p.varsMu.RLock()
+	vars := p.vars
+	p.varsMu.RUnlock()
+
+	if len(vars) == 0 {
 		return raw
 	}
-	result := string(raw)
-	for k, v := range p.vars {
-		result = strings.ReplaceAll(result, "{{"+k+"}}", v)
+	pairs := make([]string, 0, len(vars)*2)
+	for k, v := range vars {
+		pairs = append(pairs, "{{"+k+"}}", v)
 	}
-	return []byte(result)
+	return []byte(strings.NewReplacer(pairs...).Replace(string(raw)))
 }
 
 func sortDocuments(docs []*Document) {

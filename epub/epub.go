@@ -90,13 +90,26 @@ func Write(docs []*mdx.Document, opts Options, outputPath string) error {
 	uuid := newUUIDv4()
 	modified := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	outDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
-	f, err := os.Create(outputPath)
+	// Written to a temp file and renamed into place only once the archive
+	// is fully built, so a failure partway through (a bad chapter, a full
+	// disk, an interrupted process) can't truncate or corrupt a
+	// previously good outputPath the way writing directly into it with
+	// os.Create would.
+	f, err := os.CreateTemp(outDir, filepath.Base(outputPath)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("creating output file: %w", err)
+		return fmt.Errorf("creating temp output file: %w", err)
 	}
+	tmpPath := f.Name()
+	// Registered before the Close defer below so it runs after it (defers
+	// run LIFO): removing tmpPath while f is still open fails silently on
+	// Windows, which — unlike POSIX — doesn't allow deleting an open file.
+	// Both are no-ops by the time Write returns successfully (f is closed
+	// explicitly below, and tmpPath no longer exists once renamed).
+	defer func() { _ = os.Remove(tmpPath) }()
 	defer func() { _ = f.Close() }()
 
 	zw := zip.NewWriter(f)
@@ -167,6 +180,12 @@ func Write(docs []*mdx.Document, opts Options, outputPath string) error {
 
 	if err = zw.Close(); err != nil {
 		return fmt.Errorf("finalizing EPUB archive: %w", err)
+	}
+	if err = f.Close(); err != nil {
+		return fmt.Errorf("closing temp output file: %w", err)
+	}
+	if err = os.Rename(tmpPath, outputPath); err != nil {
+		return fmt.Errorf("finalizing output file: %w", err)
 	}
 	return nil
 }
