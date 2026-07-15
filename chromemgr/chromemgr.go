@@ -308,12 +308,15 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 	if err != nil {
 		return err
 	}
-	defer func() { _ = out.Close() }()
+	// Registered before the Close defer below so it runs after it (defers
+	// run LIFO): removing dest while out is still open fails silently on
+	// Windows, which — unlike POSIX — doesn't allow deleting an open file.
 	defer func() {
 		if err != nil {
 			_ = os.Remove(dest)
 		}
 	}()
+	defer func() { _ = out.Close() }()
 
 	total := resp.ContentLength
 	var written int64
