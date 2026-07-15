@@ -18,6 +18,8 @@ package chromemgr
 import (
 	"archive/zip"
 	"context"
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -276,7 +278,7 @@ func fetchManifest(ctx context.Context) (*versionManifest, error) {
 	return &manifest, nil
 }
 
-func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) error {
+func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) (err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -290,11 +292,28 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 		return fmt.Errorf("downloading %s: unexpected status %s", url, resp.Status)
 	}
 
+	// The Chrome for Testing manifest publishes no signed checksum, but the
+	// binaries are served straight from Google Cloud Storage, which returns
+	// the object's own MD5 in X-Goog-Hash. Checking the downloaded bytes
+	// against it is not supply-chain provenance (a compromised origin object
+	// would carry a matching header), but it does catch transport-level
+	// corruption and a class of MITM that swaps response bytes without also
+	// recomputing this header — worth doing since we're about to chmod +x
+	// and execute the result. #nosec G401 -- MD5 chosen to match GCS's own
+	// object-integrity header, not used for any security-sensitive purpose.
+	wantMD5, haveMD5 := gcsMD5FromHeader(resp.Header)
+	hasher := md5.New() //nolint:gosec
+
 	out, err := os.Create(dest)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = out.Close() }()
+	defer func() {
+		if err != nil {
+			_ = os.Remove(dest)
+		}
+	}()
 
 	total := resp.ContentLength
 	var written int64
@@ -306,6 +325,7 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 			if _, werr := out.Write(buf[:n]); werr != nil {
 				return werr
 			}
+			hasher.Write(buf[:n])
 			written += int64(n)
 			if progress != nil && time.Since(lastReport) > 750*time.Millisecond {
 				if total > 0 {
@@ -323,7 +343,46 @@ func downloadFile(ctx context.Context, url, dest string, progress ProgressFunc) 
 			return rerr
 		}
 	}
+
+	if haveMD5 {
+		if gotMD5 := hasher.Sum(nil); !equalDigest(gotMD5, wantMD5) {
+			return fmt.Errorf("downloaded file %s failed integrity check (checksum mismatch) — possible corrupted or tampered download", url)
+		}
+	}
 	return nil
+}
+
+// gcsMD5FromHeader extracts the base64-encoded MD5 digest Google Cloud
+// Storage reports for an object via X-Goog-Hash (e.g. "md5=<base64>",
+// possibly alongside a "crc32c=<base64>" entry in the same or a separate
+// header line).
+func gcsMD5FromHeader(h http.Header) (digest []byte, ok bool) {
+	for _, line := range h.Values("X-Goog-Hash") {
+		for _, part := range strings.Split(line, ",") {
+			kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+			if len(kv) != 2 || kv[0] != "md5" {
+				continue
+			}
+			decoded, err := base64.StdEncoding.DecodeString(kv[1])
+			if err != nil {
+				continue
+			}
+			return decoded, true
+		}
+	}
+	return nil, false
+}
+
+func equalDigest(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // unzip extracts src into dest, guarding against Zip Slip (archive entries

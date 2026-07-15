@@ -27,7 +27,7 @@ func buildTOC(docs []*mdx.Document) string {
 		isH3 := parts[2] != 0
 
 		link := fmt.Sprintf(`<a href="#%s">%s %s</a>`,
-			mdx.AnchorID(d.ID()),
+			template.HTMLEscapeString(mdx.AnchorID(d.ID())),
 			template.HTMLEscapeString(d.ID()),
 			template.HTMLEscapeString(d.Title()))
 

@@ -8,6 +8,8 @@ import (
 
 var idExtractRe = regexp.MustCompile(`^\[(\d+)\.(\d+)\.(\d+)\]$`)
 
+var anchorUnsafeCharsRe = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+
 type Document struct {
 	Path        string
 	Frontmatter map[string]interface{}
@@ -124,6 +126,11 @@ func SplitID(id string) []int {
 	return parts
 }
 
+// AnchorID derives an HTML-safe anchor id from a document's frontmatter id.
+// The id frontmatter field is user-controlled content, so any character
+// outside the safe HTML-id set is replaced rather than passed through —
+// callers embed the result directly into id/href attributes without
+// further escaping.
 func AnchorID(id string) string {
-	return "section-" + strings.Trim(id, "[]")
+	return "section-" + anchorUnsafeCharsRe.ReplaceAllString(strings.Trim(id, "[]"), "-")
 }

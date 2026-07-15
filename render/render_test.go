@@ -1,6 +1,7 @@
 package render
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -138,6 +139,37 @@ func TestRenderToPDFNetworkBlockedByDefaultStillRenders(t *testing.T) {
 	info, err := os.Stat(outPath)
 	if err != nil || info.Size() == 0 {
 		t.Fatal("expected a non-empty PDF despite the blocked remote image")
+	}
+}
+
+// TestRenderToPDFWithAuditContextStopsOnCancellation guards a real bug:
+// RenderToPDFWithAudit used to root its Chrome allocator in
+// context.Background() regardless of what the caller passed in, so
+// canceling a caller's context (client disconnect, SIGINT wired to context
+// cancellation) never actually stopped an in-flight render — it kept
+// running until opts.Timeout regardless. RenderToPDFWithAuditContext must
+// tear down well before that timeout once ctx is canceled.
+func TestRenderToPDFWithAuditContextStopsOnCancellation(t *testing.T) {
+	requireChrome(t)
+
+	dir := t.TempDir()
+	outPath := filepath.Join(dir, "out.pdf")
+
+	opts := DefaultOptions()
+	opts.Timeout = 60 * time.Second // deliberately long: cancellation, not the timeout, must be what stops this
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already canceled before the render even starts
+
+	start := time.Now()
+	_, err := RenderToPDFWithAuditContext(ctx, `<html><body>x</body></html>`, outPath, opts)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected an error for a render started with an already-canceled context")
+	}
+	if elapsed > 15*time.Second {
+		t.Errorf("expected cancellation to stop the render quickly, took %v (opts.Timeout was %v)", elapsed, opts.Timeout)
 	}
 }
 

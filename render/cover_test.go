@@ -176,6 +176,36 @@ func abs(n int) int {
 	return n
 }
 
+func TestMergeCoverAndBodyPreservesExistingFileOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "book.pdf")
+
+	const goodContent = "existing good pdf bytes"
+	if err := os.WriteFile(outputPath, []byte(goodContent), 0644); err != nil {
+		t.Fatalf("seeding output file: %v", err)
+	}
+
+	if err := mergeCoverAndBody([]byte("not a pdf"), []byte("also not a pdf"), outputPath); err == nil {
+		t.Fatal("expected mergeCoverAndBody to fail on invalid PDF input")
+	}
+
+	got, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("reading output file: %v", err)
+	}
+	if string(got) != goodContent {
+		t.Errorf("existing output file was modified on merge failure: got %q, want %q", got, goodContent)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading dir: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("expected no leftover temp files, got %d entries: %v", len(entries), entries)
+	}
+}
+
 func TestRenderToPDFWithCoverImageRejectsUnsupportedFormat(t *testing.T) {
 	dir := t.TempDir()
 	badPath := filepath.Join(dir, "cover.bmp")

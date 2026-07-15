@@ -6,8 +6,30 @@ package theme
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+// cssDeclarationUnsafeRe matches characters that would let a color/font
+// value (user-supplied via Options or a custom theme's YAML) escape its
+// CSS declaration or the surrounding <style> block — e.g. a value like
+// "red;} .cover{display:block" reopening a new rule after the :root block.
+// Parens/quotes are left alone since legitimate values need them (rgb(...),
+// "Georgia", serif).
+var cssDeclarationUnsafeRe = regexp.MustCompile(`[;{}<>\\\r\n]`)
+
+// cssURLUnsafeRe is used for values embedded inside a CSS url('...')
+// (the Google Fonts @import), so — unlike cssDeclarationUnsafeRe — it also
+// strips quotes and parens that would otherwise close the url() early.
+var cssURLUnsafeRe = regexp.MustCompile(`[;{}<>'"()\\\r\n]`)
+
+func sanitizeCSSDeclarationValue(s string) string {
+	return cssDeclarationUnsafeRe.ReplaceAllString(s, "")
+}
+
+func sanitizeCSSURLValue(s string) string {
+	return cssURLUnsafeRe.ReplaceAllString(s, "")
+}
 
 // Theme is a built-in (or synthetic) theme: a name plus the CSS that
 // implements its palette/typography and any structural deltas on top of
@@ -104,7 +126,7 @@ func Resolve(t Theme, opts Options) (string, ResolvedSections, error) {
 	var root []string
 	appendVar := func(name, value string) {
 		if value != "" {
-			root = append(root, fmt.Sprintf("--pdf-%s: %s;", name, value))
+			root = append(root, fmt.Sprintf("--pdf-%s: %s;", name, sanitizeCSSDeclarationValue(value)))
 		}
 	}
 	appendVar("primary", opts.Colors.Primary)
@@ -174,7 +196,7 @@ func googleFontsImport(families []string) string {
 	}
 	cleaned := make([]string, 0, len(families))
 	for _, f := range families {
-		f = strings.TrimSpace(f)
+		f = strings.TrimSpace(sanitizeCSSURLValue(f))
 		if f == "" {
 			continue
 		}

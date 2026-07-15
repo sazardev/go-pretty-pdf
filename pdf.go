@@ -434,7 +434,7 @@ func (p *PDF) Build(ctx context.Context) error {
 	}
 
 	p.logVerbose(fmt.Sprintf("Rendering PDF to %s...", p.outputFile))
-	report, err := render.RenderToPDFWithAudit(html, p.outputFile, p.renderOpts)
+	report, err := render.RenderToPDFWithAuditContext(ctx, html, p.outputFile, p.renderOpts)
 	if err != nil {
 		return fmt.Errorf("rendering PDF: %w", err)
 	}

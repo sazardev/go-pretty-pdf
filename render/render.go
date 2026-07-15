@@ -130,7 +130,22 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 // composed document, returning its findings alongside any render error.
 // The audit never turns a successful render into a failure: an audit
 // finding is a warning about the *output*, not a reason to reject it.
+//
+// Keeps this signature exactly as-is for API stability — it roots the
+// browser in context.Background() internally, so a caller that needs to
+// cancel an in-flight render (e.g. on client disconnect or SIGINT) should
+// use RenderToPDFWithAuditContext instead.
 func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (*AuditReport, error) {
+	return RenderToPDFWithAuditContext(context.Background(), htmlContent, outputPath, opts)
+}
+
+// RenderToPDFWithAuditContext is RenderToPDFWithAudit with the browser
+// rooted in ctx instead of context.Background(): canceling ctx (client
+// disconnect, SIGINT wired to context cancellation, etc.) now actually
+// tears down the in-flight Chrome allocator/render instead of running to
+// completion or to opts.Timeout regardless. opts.Timeout still applies as
+// an upper bound layered on top of ctx via context.WithTimeout.
+func RenderToPDFWithAuditContext(ctx context.Context, htmlContent string, outputPath string, opts Options) (*AuditReport, error) {
 	// Resolved and validated up front, before spinning up a browser at
 	// all, so a bad --cover-image path fails fast with a clear error
 	// instead of after a full Chrome launch.
@@ -158,13 +173,13 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 		allocOpts = append(allocOpts, chromedp.ExecPath(opts.ChromeExecPath))
 	}
 
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), allocOpts...)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, allocOpts...)
 	defer allocCancel()
 
-	ctx, cancel := chromedp.NewContext(allocCtx)
+	browserCtx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
-	ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+	browserCtx, cancel = context.WithTimeout(browserCtx, opts.Timeout)
 	defer cancel()
 
 	navURL, cleanup, err := navigationURLFor(htmlContent)
@@ -291,7 +306,7 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 		}),
 	)
 
-	if err := chromedp.Run(ctx, tasks...); err != nil {
+	if err := chromedp.Run(browserCtx, tasks...); err != nil {
 		return nil, fmt.Errorf("chromedp render: %w", err)
 	}
 

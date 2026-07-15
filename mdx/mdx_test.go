@@ -314,6 +314,7 @@ func TestAnchorID(t *testing.T) {
 		{"[0.0.0]", "section-0.0.0"},
 		{"1.0.0", "section-1.0.0"},
 		{"", "section-"},
+		{`1.0.0"><script>alert(1)</script>`, "section-1.0.0-script-alert-1-script-"},
 	}
 	for _, tt := range tests {
 		got := AnchorID(tt.id)

@@ -7,6 +7,9 @@ import (
 	"html/template"
 	"strings"
 
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+
 	"github.com/sazardev/go-pretty-pdf/mdx"
 )
 
@@ -140,10 +143,40 @@ const chapterTemplateSrc = `<!DOCTYPE html>
 
 var chapterTemplate = template.Must(template.New("chapter").Parse(chapterTemplateSrc))
 
+// xhtmlifyFragment reparses an HTML fragment and re-serializes it through
+// x/net/html so it's safe to embed in a document declared
+// application/xhtml+xml. goldmark's output (rendered with WithUnsafe, so
+// raw HTML an MDX author types by hand — <br>, &nbsp;, &mdash; — passes
+// through untouched) is only guaranteed to be HTML5-lenient-parser-safe,
+// not well-formed XML: void elements may be unclosed, and named entities
+// like &nbsp; aren't defined without a DTD. x/net/html's parser resolves
+// entities to literal Unicode text and its renderer always self-closes
+// void elements and only emits the five XML-legal escapes, so the
+// round-trip produces markup a strict EPUB reader can actually parse.
+func xhtmlifyFragment(htmlFragment string) (string, error) {
+	context := &html.Node{Type: html.ElementNode, Data: "body", DataAtom: atom.Body}
+	nodes, err := html.ParseFragment(strings.NewReader(htmlFragment), context)
+	if err != nil {
+		return "", fmt.Errorf("parsing chapter HTML: %w", err)
+	}
+	var buf bytes.Buffer
+	for _, n := range nodes {
+		if err := html.Render(&buf, n); err != nil {
+			return "", fmt.Errorf("rendering chapter XHTML: %w", err)
+		}
+	}
+	return buf.String(), nil
+}
+
 func renderChapterXHTML(opts Options, ch chapterInfo) (string, error) {
+	body, err := xhtmlifyFragment(ch.doc.HTML)
+	if err != nil {
+		return "", fmt.Errorf("chapter %q: %w", ch.doc.ID(), err)
+	}
+
 	var buf bytes.Buffer
 	buf.WriteString(xmlProlog)
-	err := chapterTemplate.Execute(&buf, struct {
+	err = chapterTemplate.Execute(&buf, struct {
 		Lang     string
 		Title    string
 		AnchorID string
@@ -152,7 +185,7 @@ func renderChapterXHTML(opts Options, ch chapterInfo) (string, error) {
 		Lang:     opts.Language,
 		Title:    ch.doc.Title(),
 		AnchorID: mdx.AnchorID(ch.doc.ID()),
-		Body:     template.HTML(ch.doc.HTML),
+		Body:     template.HTML(body),
 	})
 	return buf.String(), err
 }

@@ -133,14 +133,15 @@ func (ls *liveServer) rebuild(pdf *prettypdf.PDF) error {
 	return nil
 }
 
+// notifyReload closes the current reload channel (waking any /events
+// connections blocked on it) and replaces it with a fresh one. The whole
+// close-and-replace happens under a single write lock rather than a
+// separate read-then-write pair: two notifyReload calls racing on the
+// latter would both read the same (not-yet-replaced) channel and the
+// second close would panic on an already-closed channel.
 func (ls *liveServer) notifyReload() {
-	ls.mu.RLock()
-	ch := ls.reloadCh
-	ls.mu.RUnlock()
-
-	close(ch)
-
 	ls.mu.Lock()
+	close(ls.reloadCh)
 	ls.reloadCh = make(chan struct{})
 	ls.mu.Unlock()
 }
@@ -169,7 +170,9 @@ func (ls *liveServer) serveSSE(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "event: connected\ndata:\n\n")
 	flusher.Flush()
 
+	ls.mu.RLock()
 	ch := ls.reloadCh
+	ls.mu.RUnlock()
 
 	ctx := r.Context()
 	select {

@@ -131,6 +131,28 @@ func TestResolveColorAndFontOverrides(t *testing.T) {
 	}
 }
 
+func TestResolveSanitizesCSSInjectionInColorAndFontOverrides(t *testing.T) {
+	th, _ := Get(NameDefault)
+
+	css, _, err := Resolve(th, Options{
+		Colors: Colors{Primary: "red;} .cover{display:block !important;} .x{color:red"},
+		Fonts:  Fonts{Heading: "</style><script>alert(1)</script>"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(css, ".cover{display:block") || strings.Contains(css, "<script>") || strings.Contains(css, "</style>") {
+		t.Errorf("expected CSS-breaking characters to be stripped from overrides, got: %s", css)
+	}
+}
+
+func TestGoogleFontsImportSanitizesInjection(t *testing.T) {
+	imp := googleFontsImport([]string{`Evil');}</style><script>alert(1)</script`})
+	if strings.Contains(imp, "');}") || strings.Contains(imp, "<script>") || strings.Contains(imp, "</style>") {
+		t.Errorf("expected google fonts import to strip URL-breaking characters, got: %s", imp)
+	}
+}
+
 func TestResolveSectionToggles(t *testing.T) {
 	th, _ := Get(NameDefault)
 

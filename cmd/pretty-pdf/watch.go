@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -56,6 +57,7 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		output.PrintWatchBanner()
 	}
 
+	var statsMu sync.Mutex
 	stats := output.WatchStats{Running: true}
 
 	sigCh := make(chan os.Signal, 1)
@@ -90,7 +92,10 @@ func runWatch(cmd *cobra.Command, args []string) error {
 	go func() {
 		for range sigCh {
 			fmt.Println()
-			output.PrintWatchSummary(stats)
+			statsMu.Lock()
+			snapshot := stats
+			statsMu.Unlock()
+			output.PrintWatchSummary(snapshot)
 			os.Exit(0)
 		}
 	}()
@@ -104,19 +109,26 @@ func runWatch(cmd *cobra.Command, args []string) error {
 		pdf, err := prettypdf.New(opts...)
 
 		if err != nil {
+			statsMu.Lock()
 			stats.RecordError()
+			statsMu.Unlock()
 			fmt.Println(output.Error(fmt.Sprintf("Initialization failed: %v", err)))
 			continue
 		}
 
 		spinner := output.StartSpinner("Rebuilding...")
 		err = pdf.Build(cmd.Context())
+		statsMu.Lock()
 		if err != nil {
-			spinner.Fail(err.Error())
 			stats.RecordError()
 		} else {
-			spinner.Done(fmt.Sprintf("Done in %s", time.Since(startTime).Round(time.Millisecond)))
 			stats.RecordBuild()
+		}
+		statsMu.Unlock()
+		if err != nil {
+			spinner.Fail(err.Error())
+		} else {
+			spinner.Done(fmt.Sprintf("Done in %s", time.Since(startTime).Round(time.Millisecond)))
 		}
 	}
 

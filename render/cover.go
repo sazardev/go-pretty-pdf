@@ -124,19 +124,34 @@ func coverPDFTasks(imagePath string, widthIn, heightIn float64, out *[]byte) (ch
 // rest of the document — the two are printed separately and stitched back
 // together here instead.
 func mergeCoverAndBody(coverPDF, bodyPDF []byte, outputPath string) error {
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	outDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return fmt.Errorf("creating output directory: %w", err)
 	}
 
-	out, err := os.Create(outputPath)
+	// Written to a temp file and renamed into place only on success, so a
+	// mid-merge failure (malformed cover PDF, pdfcpu error) can't truncate
+	// or corrupt a previously good outputPath — os.Create would otherwise
+	// blow away the existing file before MergeRaw has produced anything.
+	tmp, err := os.CreateTemp(outDir, filepath.Base(outputPath)+".tmp-*")
 	if err != nil {
-		return fmt.Errorf("creating output PDF: %w", err)
+		return fmt.Errorf("creating temp output PDF: %w", err)
 	}
-	defer func() { _ = out.Close() }()
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	rsc := []io.ReadSeeker{bytes.NewReader(coverPDF), bytes.NewReader(bodyPDF)}
-	if err := api.MergeRaw(rsc, out, false, nil); err != nil {
-		return fmt.Errorf("merging cover and body PDFs: %w", err)
+	mergeErr := api.MergeRaw(rsc, tmp, false, nil)
+	closeErr := tmp.Close()
+	if mergeErr != nil {
+		return fmt.Errorf("merging cover and body PDFs: %w", mergeErr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("closing temp output PDF: %w", closeErr)
+	}
+
+	if err := os.Rename(tmpPath, outputPath); err != nil {
+		return fmt.Errorf("finalizing output PDF: %w", err)
 	}
 	return nil
 }

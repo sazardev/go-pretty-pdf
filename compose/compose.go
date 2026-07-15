@@ -62,7 +62,7 @@ func ComposeHTML(docs []*mdx.Document, opts Options) (string, error) {
 	}
 
 	for _, doc := range docs {
-		fmt.Fprintf(&bodyBuf, `<section id="%s">`+"\n", mdx.AnchorID(doc.ID()))
+		fmt.Fprintf(&bodyBuf, `<section id="%s">`+"\n", template.HTMLEscapeString(mdx.AnchorID(doc.ID())))
 		bodyBuf.WriteString(doc.HTML)
 		bodyBuf.WriteString("</section>\n")
 	}

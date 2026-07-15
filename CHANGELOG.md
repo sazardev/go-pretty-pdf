@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2026-07-15
 
 ### Added
 
@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **`build` silently failed on large books with `chromedp render: page load error net::ERR_ABORTED`**: rendering navigated Chrome to a `data:text/html;charset=utf-8;base64,...` URI holding the entire composed document, which Chrome (via chromedp/CDP's `Page.navigate`) aborts once the encoded payload crosses roughly 2MB — with no message indicating size was the cause. A book with a few hundred thousand words of prose and code crosses that threshold easily. Rendering now writes the composed HTML to a temporary file and navigates to it via a `file://` URL instead (removed once the page is captured), which has no such ceiling; the existing default-network-blocking behavior (`NetworkAccess: false` still blocks external `http(s)://` resources) is unaffected. No public API changed. New regression test `TestRenderToPDFLargeDocumentPastOldDataURILimit` generates a document past the old limit and confirms it renders.
+- **`context.Context` cancellation was ignored during rendering**: `PDF.Build(ctx)` never propagated `ctx` into the Chrome render — canceling it (client disconnect, SIGINT wired to context cancellation) had no effect and the render ran to completion or `Options.Timeout` regardless. New `render.RenderToPDFWithAuditContext(ctx, ...)` roots the Chrome allocator in the caller's context; `Build` now uses it. `render.RenderToPDF`/`RenderToPDFWithAudit` keep their exact previous signatures (rooted in `context.Background()`) for API stability.
+- **Data race on live-reload's SSE channel** (`pretty-pdf serve`): an `/events` connection read `reloadCh` with no lock while a rebuild concurrently closed and reassigned it, which could make an in-flight connection observe a stale, already-closed channel and never see a subsequent reload. Also hardened `notifyReload` itself to close-and-replace under a single lock instead of a separate read-then-write pair, which could otherwise panic with "close of closed channel" under concurrent calls.
+- **Data race on watch-mode build stats** (`pretty-pdf watch`): `WatchStats` was mutated from the rebuild loop and read from the Ctrl+C signal handler with no synchronization. Now guarded by a mutex.
+- **A failed `--cover-image` merge could destroy a previously good PDF**: `mergeCoverAndBody` truncated the output file immediately via `os.Create`, before the pdfcpu merge had actually succeeded. A merge failure partway through (malformed cover PDF, pdfcpu error) left an empty/partial file in place of the last good output. Now written to a temp file and renamed into place only on success.
+
+### Security
+
+- **HTML injection via the `id` frontmatter field**: `mdx.AnchorID` passed the `id` field straight through into `id`/`href` HTML attributes with no escaping (`compose.ComposeHTML`/`buildTOC` bypassed `html/template`'s autoescaping by building markup with `fmt.Fprintf` + `template.HTML`). A crafted `id` like `1.0.0"><script>...` could inject arbitrary markup into the composed document. `AnchorID` now sanitizes to a safe HTML-id charset at the source, plus defense-in-depth escaping at both call sites.
+- **CSS injection via theme color/font overrides**: `theme.Resolve` interpolated `Options.Colors`/`Options.Fonts` values (and Google Fonts family names) straight into generated CSS/`url(...)` with no escaping, letting a value containing `;`/`{`/`}`/`'`/`)` break out of its declaration and inject arbitrary rules (e.g. re-enabling a hidden `.cover`). Values are now sanitized before use.
+- **Malformed/malicious EPUB chapter content**: goldmark's raw-HTML passthrough (`WithUnsafe`) means an MDX author's literal `<br>` or `&nbsp;`/`&mdash;` reaches `epub.Write` unmodified — valid enough for Chrome's lenient HTML parser (the PDF path), but not well-formed XML, breaking strict EPUB readers. Chapter bodies are now reparsed/re-serialized through `x/net/html` before templating, which always self-closes void elements and resolves entities to literal text.
+- **Auto-downloaded Chrome binary had no integrity check**: `chromemgr.EnsureChrome`'s one-time download fetched `chrome-headless-shell` over HTTPS with no verification before `chmod +x` and executing it. The Chrome for Testing manifest publishes no signed checksum, but the binaries are served from Google Cloud Storage, which reports the object's own MD5 via `X-Goog-Hash`; the download is now checked against it (catches transport corruption and a class of tampering proxy), and a mismatched/corrupt download is removed rather than left on disk.
+- **`golang.org/x/image` bumped to v0.43.0**: fixes two known panics decoding a malformed/large WEBP image (GO-2026-5061, GO-2026-4961), reachable via `--cover-image`'s dimension probing (`render.coverImageDimensionsIn`).
+- **`golang.org/x/net` bumped to v0.55.0**: the new `epub.xhtmlifyFragment` (above) calls `x/net/html`'s `ParseFragment`/`Render`, which at v0.54.0 carried five known issues (GO-2026-5025/5027/5028/5029/5030 — a DoS parsing arbitrary HTML, an XSS via duplicate attributes, and related HTML-parsing correctness bugs) in the exact code path `xhtmlifyFragment` exercises on every chapter's body.
 
 ## [0.7.0] - 2026-07-07
 

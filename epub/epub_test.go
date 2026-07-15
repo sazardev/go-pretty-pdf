@@ -164,6 +164,39 @@ func TestWriteAllXMLFilesAreWellFormed(t *testing.T) {
 	}
 }
 
+// TestWriteHandlesRawUnclosedVoidElementsAndEntities guards a real bug: an
+// MDX author typing raw HTML in their markdown (goldmark's WithUnsafe
+// passes it through untouched) can write an unclosed void element like
+// <br> or an HTML named entity like &nbsp; that's undefined in XML without
+// a DTD. Chrome's lenient HTML parser tolerates both when rendering the
+// PDF, but a chapter emitted verbatim into an XHTML file breaks the well-
+// formedness EPUB readers require. xhtmlifyFragment (templates.go) exists
+// to fix this by reparsing/re-serializing through x/net/html before the
+// chapter template runs.
+func TestWriteHandlesRawUnclosedVoidElementsAndEntities(t *testing.T) {
+	dir := t.TempDir()
+	docs := []*mdx.Document{
+		mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "Raw HTML",
+			"# Raw HTML\n\nLine one.<br>Line two with a&nbsp;non-breaking space and an em&mdash;dash.\n"),
+	}
+	outPath := filepath.Join(dir, "out.epub")
+
+	if err := Write(docs, DefaultOptions(), outPath); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	files := readZip(t, outPath)
+	chapter, ok := files["OEBPS/text/ch0001.xhtml"]
+	if !ok {
+		t.Fatal("expected OEBPS/text/ch0001.xhtml in the EPUB")
+	}
+	assertWellFormedXML(t, "OEBPS/text/ch0001.xhtml", chapter)
+
+	if strings.Contains(string(chapter), "&nbsp;") || strings.Contains(string(chapter), "&mdash;") {
+		t.Errorf("expected named entities to be resolved to literal characters, got:\n%s", chapter)
+	}
+}
+
 func TestWriteSpineAndTOCOrderMatchesDocOrder(t *testing.T) {
 	dir := t.TempDir()
 	docs := []*mdx.Document{
