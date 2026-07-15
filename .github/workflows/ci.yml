@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - run: go mod tidy
       - run: git diff --exit-code -- go.mod go.sum
 
@@ -28,6 +29,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - uses: golangci/golangci-lint-action@v7
         with:
           version: latest
@@ -44,6 +46,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - run: go test -race -coverprofile=coverage.out ./...
         shell: bash
 
@@ -54,6 +57,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - run: go vet ./...
 
   vulncheck:
@@ -63,6 +67,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   build:
@@ -76,4 +81,5 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          check-latest: true
       - run: go build -ldflags="-s -w" ./cmd/pretty-pdf
