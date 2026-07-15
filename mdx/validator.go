@@ -27,6 +27,12 @@ type Validator interface {
 const defaultTitleField = "title"
 const defaultIDValue = "[1.0.0]"
 
+// ContentField is the ValidationError.Field value used for warnings about
+// a document's rendered content (currently just excess heading depth)
+// rather than a specific frontmatter field — callers use it to treat
+// content warnings more leniently than a missing/malformed field.
+const ContentField = "content"
+
 type DefaultValidator struct {
 	RequireFrontmatter []string
 	NoDuplicateIDs     bool
@@ -77,7 +83,7 @@ func (v *DefaultValidator) Validate(doc *Document) []ValidationError {
 		if depth > v.MaxHeadingDepth {
 			errs = append(errs, ValidationError{
 				File:    doc.Path,
-				Field:   "content",
+				Field:   ContentField,
 				Message: fmt.Sprintf("heading depth exceeds maximum of h%d (found h%d)", v.MaxHeadingDepth, depth),
 			})
 		}

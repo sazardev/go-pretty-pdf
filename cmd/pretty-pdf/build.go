@@ -376,7 +376,42 @@ func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error) []
 		}
 	}
 
+	if cfg.Render.CoverImage != "" {
+		results = append(results, coverImagePreFlight(cfg.Render.CoverImage))
+	}
+
 	return results
+}
+
+func coverImagePreFlight(path string) output.PreFlightResult {
+	info, err := os.Stat(path)
+	if err != nil {
+		return output.PreFlightResult{
+			Name:    coverImageExists,
+			Passed:  false,
+			Message: fmt.Sprintf("%s: %v", path, err),
+		}
+	}
+	if info.IsDir() {
+		return output.PreFlightResult{
+			Name:    coverImageExists,
+			Passed:  false,
+			Message: fmt.Sprintf("%s is a directory, not an image file", path),
+		}
+	}
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png", ".jpg", ".jpeg":
+	default:
+		return output.PreFlightResult{
+			Name:    coverImageExists,
+			Passed:  false,
+			Message: fmt.Sprintf("%s: unsupported format (expected .png, .jpg, or .jpeg)", path),
+		}
+	}
+	return output.PreFlightResult{
+		Name:   coverImageExists,
+		Passed: true,
+	}
 }
 
 func countMDXFiles(dir string) int {

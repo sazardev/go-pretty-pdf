@@ -262,6 +262,7 @@ see [docs/cli.md#themes](docs/cli.md#themes).
 
 ```
 pretty-pdf build     Build a PDF from MDX source files
+pretty-pdf epub      Build an EPUB from MDX source files (no Chrome required)
 pretty-pdf check     Validate MDX files without building
 pretty-pdf theme     List, inspect, and manage themes
 pretty-pdf init      Scaffold a new book project (interactive wizard)

@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/mdx"
 )
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -51,7 +52,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	errors := 0
 
 	for _, e := range errs {
-		if e.Field == "content" && !strict {
+		if e.Field == mdx.ContentField && !strict {
 			warnings++
 		} else {
 			errors++
@@ -68,7 +69,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	} else {
 		if errors > 0 {
 			for _, e := range errs {
-				if e.Field != "content" || strict {
+				if e.Field != mdx.ContentField || strict {
 					fmt.Printf("ERROR: %v\n", e)
 				}
 			}

@@ -355,6 +355,52 @@ func TestWithFullConfigExplicitZeroMargin(t *testing.T) {
 	}
 }
 
+func TestWithCoverImageForcesShowCoverFalse(t *testing.T) {
+	// WithCoverImage must win over the theme's text cover regardless of
+	// the order options were applied in: a theme resolved *after*
+	// WithCoverImage must not silently re-enable the text cover on top of
+	// the custom image.
+	p, err := New(WithCoverImage("cover.png"), WithThemeName("default", theme.Options{}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.renderOpts.CoverImagePath != "cover.png" {
+		t.Errorf("expected CoverImagePath to be set, got %q", p.renderOpts.CoverImagePath)
+	}
+	if p.composeOpts.ShowCover {
+		t.Error("expected ShowCover to be forced false when a cover image is set")
+	}
+
+	// And the reverse order.
+	p2, err := New(WithThemeName("default", theme.Options{}), WithCoverImage("cover.png"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p2.composeOpts.ShowCover {
+		t.Error("expected ShowCover to be forced false regardless of option order")
+	}
+}
+
+func TestWithFullConfigCoverImage(t *testing.T) {
+	cfg := &config.Config{
+		Source: testSourceDir,
+		Render: config.RenderConfig{
+			CoverImage: "assets/cover.png",
+		},
+	}
+
+	p, err := New(WithFullConfig(cfg))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.renderOpts.CoverImagePath != "assets/cover.png" {
+		t.Errorf("expected CoverImagePath from config, got %q", p.renderOpts.CoverImagePath)
+	}
+	if p.composeOpts.ShowCover {
+		t.Error("expected ShowCover to be forced false when cfg.Render.CoverImage is set")
+	}
+}
+
 func TestPDFParseDirAndComposeHTML(t *testing.T) {
 	dir := t.TempDir()
 	writeFixtureMDX(t, dir, "a.mdx", "[1.0.0]", "Chapter One")

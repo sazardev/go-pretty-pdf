@@ -27,6 +27,13 @@ type Options struct {
 	NetworkAccess bool
 	PageNumbers   bool
 	ShowHeader    bool
+	// CoverImagePath, when non-empty, prepends a full-bleed cover page
+	// built from this image (.png/.jpg/.jpeg) before the rest of the
+	// document. That cover page's dimensions match the image's own pixel
+	// dimensions exactly (see coverImageDimensionsIn) rather than
+	// PaperWidth/PaperHeight — a square image gets a square cover page —
+	// while every other page keeps the configured paper size untouched.
+	CoverImagePath string
 	// ChromeExecPath, when non-empty, pins chromedp to this specific
 	// Chrome/Chromium/chrome-headless-shell binary instead of letting it
 	// search the system's default install locations. Callers resolving a
@@ -124,6 +131,18 @@ func RenderToPDF(htmlContent string, outputPath string, opts Options) error {
 // The audit never turns a successful render into a failure: an audit
 // finding is a warning about the *output*, not a reason to reject it.
 func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (*AuditReport, error) {
+	// Resolved and validated up front, before spinning up a browser at
+	// all, so a bad --cover-image path fails fast with a clear error
+	// instead of after a full Chrome launch.
+	var coverWidthIn, coverHeightIn float64
+	if opts.CoverImagePath != "" {
+		var err error
+		coverWidthIn, coverHeightIn, err = coverImageDimensionsIn(opts.CoverImagePath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.DisableGPU,
 		chromedp.NoSandbox,
@@ -233,6 +252,16 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 	// pair with MarginTop/Bottom: 0 for a genuinely gap-free page.
 	needsHeaderFooter := opts.ShowHeader || opts.PageNumbers
 
+	var coverPDFBuf []byte
+	if opts.CoverImagePath != "" {
+		coverTasks, coverCleanup, err := coverPDFTasks(opts.CoverImagePath, coverWidthIn, coverHeightIn, &coverPDFBuf)
+		if err != nil {
+			return nil, err
+		}
+		defer coverCleanup()
+		tasks = append(tasks, coverTasks...)
+	}
+
 	tasks = append(tasks,
 		chromedp.Navigate(navURL),
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -266,12 +295,17 @@ func RenderToPDFWithAudit(htmlContent string, outputPath string, opts Options) (
 		return nil, fmt.Errorf("chromedp render: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-		return nil, fmt.Errorf("creating output directory: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, pdfBuf, 0644); err != nil {
-		return nil, fmt.Errorf("writing PDF: %w", err)
+	if opts.CoverImagePath != "" {
+		if err := mergeCoverAndBody(coverPDFBuf, pdfBuf, outputPath); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+			return nil, fmt.Errorf("creating output directory: %w", err)
+		}
+		if err := os.WriteFile(outputPath, pdfBuf, 0644); err != nil {
+			return nil, fmt.Errorf("writing PDF: %w", err)
+		}
 	}
 
 	report := &AuditReport{Issues: append(domIssues, auditPDFBytes(pdfBuf)...)}

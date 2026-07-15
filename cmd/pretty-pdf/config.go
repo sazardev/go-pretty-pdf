@@ -15,6 +15,7 @@ import (
 const (
 	defaultTheme      = "default"
 	outputDirWritable = "Output directory writable"
+	coverImageExists  = "Cover image exists"
 )
 
 func loadConfig(cmd *cobra.Command) (*config.Config, error) {
@@ -42,6 +43,9 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 		}
 		if cfg.Template != "" && !filepath.IsAbs(cfg.Template) {
 			cfg.Template = filepath.Join(configDir, cfg.Template)
+		}
+		if cfg.Render.CoverImage != "" && !filepath.IsAbs(cfg.Render.CoverImage) {
+			cfg.Render.CoverImage = filepath.Join(configDir, cfg.Render.CoverImage)
 		}
 	}
 
@@ -83,6 +87,15 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	}
 	if cmd.Flags().Changed("timeout") {
 		cfg.Render.Timeout = timeoutStr
+	}
+	if cmd.Flags().Changed("cover-image") {
+		cfg.Render.CoverImage = coverImage
+		if cfg.Render.CoverImage != "" && !filepath.IsAbs(cfg.Render.CoverImage) {
+			abs, err := filepath.Abs(cfg.Render.CoverImage)
+			if err == nil {
+				cfg.Render.CoverImage = abs
+			}
+		}
 	}
 
 	if cmd.Flags().Changed("no-cover") {
@@ -137,6 +150,11 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 		if cfg.Template != "" {
 			if _, err := os.Stat(cfg.Template); err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: template file not found: %s\n", cfg.Template)
+			}
+		}
+		if cfg.Render.CoverImage != "" {
+			if _, err := os.Stat(cfg.Render.CoverImage); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: cover image not found: %s\n", cfg.Render.CoverImage)
 			}
 		}
 	}

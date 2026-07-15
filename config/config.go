@@ -76,6 +76,12 @@ type RenderConfig struct {
 	MarginLeft  string `yaml:"margin_left"`
 	MarginRight string `yaml:"margin_right"`
 	HeaderTitle string `yaml:"header_title"`
+	// CoverImage, when set, replaces the theme's text cover with a
+	// full-bleed page built from this image (.png/.jpg/.jpeg). That page
+	// is sized to the image's own pixel dimensions exactly — a square
+	// image gets a square cover page — while every other page keeps the
+	// configured Paper size untouched.
+	CoverImage string `yaml:"cover_image"`
 }
 
 func Default() *Config {

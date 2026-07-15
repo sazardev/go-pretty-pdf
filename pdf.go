@@ -173,6 +173,20 @@ func WithPaperSize(width, height float64) Option {
 	}
 }
 
+// WithCoverImage replaces the theme's text cover with a full-bleed page
+// built from imagePath (.png/.jpg/.jpeg). That cover page is sized to the
+// image's own pixel dimensions exactly — a square image gets a square
+// cover page — while every other page keeps its configured paper size. The
+// theme's own text cover (title/subtitle/metadata) is suppressed
+// regardless of theme/section settings and regardless of the order
+// options are applied in — see New(), which enforces this once after every
+// Option has run.
+func WithCoverImage(imagePath string) Option {
+	return func(p *PDF) {
+		p.renderOpts.CoverImagePath = imagePath
+	}
+}
+
 // WithNetworkAccess controls whether headless Chrome may make outbound
 // network requests while rendering. It defaults to false: the composed
 // HTML is a self-contained data URI, so network access is blocked to
@@ -330,6 +344,10 @@ func WithFullConfig(cfg *config.Config) Option {
 			p.renderOpts.MarginRight = config.ParseCSSUnit(cfg.Render.MarginRight)
 		}
 
+		if cfg.Render.CoverImage != "" {
+			p.renderOpts.CoverImagePath = cfg.Render.CoverImage
+		}
+
 		if cfg.Render.HeaderTitle != "" {
 			headerTitle := cfg.Render.HeaderTitle
 			for k, v := range cfg.Vars {
@@ -356,6 +374,14 @@ func New(opts ...Option) (*PDF, error) {
 
 	if !p.headerTitleSet {
 		p.renderOpts.HeaderTitle = p.composeOpts.Title
+	}
+
+	// A custom cover image always wins over the theme's text cover,
+	// regardless of the order WithCoverImage/WithThemeName/WithFullConfig
+	// were applied in — otherwise a theme option resolved after
+	// WithCoverImage would silently re-enable the text cover on top of it.
+	if p.renderOpts.CoverImagePath != "" {
+		p.composeOpts.ShowCover = false
 	}
 
 	if p.verbose {

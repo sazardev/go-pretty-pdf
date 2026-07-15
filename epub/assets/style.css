@@ -1,0 +1,82 @@
+/* Default EPUB stylesheet. Deliberately minimal: most reading systems
+   apply their own font/size/theme (light/dark/sepia) on top of whatever
+   a chapter declares, so this only sets structure-level spacing and
+   leaves font-family/color mostly to the reader. */
+
+body {
+  font-family: serif;
+  line-height: 1.5;
+  margin: 1em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: sans-serif;
+  line-height: 1.2;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+}
+
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.35em; }
+h3 { font-size: 1.15em; }
+
+p { margin: 0 0 1em 0; }
+
+code, pre {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+pre {
+  background: #f0f0f0;
+  padding: 0.75em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+code {
+  background: #f0f0f0;
+  padding: 0.1em 0.3em;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.25em 1em;
+  border-left: 3px solid #999;
+  color: #444;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+th, td {
+  border: 1px solid #999;
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+
+img {
+  max-width: 100%;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #999;
+  margin: 2em 0;
+}
+
+.component-deep-dive, .component-warning, .component-axiom {
+  margin: 1em 0;
+  padding: 0.75em 1em;
+  border-left: 4px solid #999;
+  background: #f7f7f7;
+}

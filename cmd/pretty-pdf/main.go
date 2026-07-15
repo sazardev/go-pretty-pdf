@@ -35,6 +35,7 @@ var (
 	themeName  string
 	cssPath    string
 	tmplPath   string
+	coverImage string
 	timeoutStr string
 	verbose    bool
 	strict     bool
@@ -58,6 +59,9 @@ var (
 	fontCode          string
 	density           string
 	allowNetworkFonts bool
+
+	epubOutPath  string
+	epubLanguage string
 )
 
 var rootCmd = &cobra.Command{
@@ -124,6 +128,17 @@ var serveCmd = &cobra.Command{
 	RunE:  runServe,
 }
 
+var epubCmd = &cobra.Command{
+	Use:   "epub",
+	Short: "Build an EPUB from MDX source files",
+	Long: `Parse MDX files, validate them, and write a single EPUB 3 file — no
+Chrome/Chromium required, unlike 'build'. Each MDX document becomes its own
+chapter, in the same order as the PDF's table of contents.`,
+	Example: `  pretty-pdf epub --title "My Book" --author "Jane Doe"
+  pretty-pdf epub --cover-image cover.png --out mybook.epub`,
+	RunE: runEpub,
+}
+
 func init() {
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(checkCmd)
@@ -133,6 +148,7 @@ func init() {
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(themeCmd)
+	rootCmd.AddCommand(epubCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "path to config file")
 	rootCmd.PersistentFlags().StringVar(&sourceDir, "source", "book", "source MDX directory")
@@ -149,6 +165,7 @@ func init() {
 	buildCmd.Flags().StringVar(&themeName, "theme", defaultTheme, fmt.Sprintf("book theme (%s, or a custom theme name/path)", strings.Join(themeNames(), ", ")))
 	buildCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path (overrides theme)")
 	buildCmd.Flags().StringVar(&tmplPath, "template", "", "custom HTML template file path (overrides theme)")
+	buildCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg); the cover page is sized to the image's own dimensions, replacing the text cover")
 	buildCmd.Flags().StringVar(&timeoutStr, "timeout", "", "render timeout (e.g. 30s, 1m)")
 	buildCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
 
@@ -176,6 +193,13 @@ func init() {
 	initCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
 
 	serveCmd.Flags().IntVar(&servePort, "port", 8080, "HTTP server port")
+
+	epubCmd.Flags().StringVar(&epubOutPath, "out", "out.epub", "output EPUB path")
+	epubCmd.Flags().StringVar(&title, "title", "", "book title")
+	epubCmd.Flags().StringVar(&subtitle, "subtitle", "", "book subtitle")
+	epubCmd.Flags().StringVar(&author, "author", "", "book author")
+	epubCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg), full-bleed as the first page")
+	epubCmd.Flags().StringVar(&epubLanguage, "language", "en", "book language (BCP-47 tag, e.g. en, es)")
 }
 
 func main() {

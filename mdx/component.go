@@ -102,6 +102,6 @@ var boldRe = regexp.MustCompile(`\*\*([^*]+)\*\*`)
 func rewriteInlineContent(content string) string {
 	result := codeSpanRe.ReplaceAllString(content, "<code>$1</code>")
 	result = boldRe.ReplaceAllString(result, "<strong>$1</strong>")
-	result = strings.ReplaceAll(result, "\n", "<br>\n")
+	result = strings.ReplaceAll(result, "\n", "<br/>\n")
 	return result
 }

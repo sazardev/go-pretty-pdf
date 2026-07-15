@@ -73,6 +73,12 @@ func NewParser(opts ...ParserOption) *Parser {
 			),
 			goldmark.WithRendererOptions(
 				goldmarkHtml.WithUnsafe(),
+				// XHTML-style self-closing void elements (<img/>, <hr/>,
+				// <br/>) are still perfectly valid HTML5 — Chrome's print
+				// pipeline doesn't care — but they're required for the
+				// epub package's chapter files to be well-formed XHTML, so
+				// this is set globally rather than per-consumer.
+				goldmarkHtml.WithXHTML(),
 			),
 		),
 		components: NewComponentRegistry(),

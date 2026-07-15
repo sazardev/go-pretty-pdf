@@ -52,6 +52,7 @@ pretty-pdf build [flags]
 | `--theme` | `"default"` | Theme name (builtin, custom, or a `.theme.yml`/`.css` path) — see [Themes](#themes) |
 | `--css` | `""` | Custom CSS file path (overrides the theme entirely) |
 | `--template` | `""` | Custom HTML template file path (overrides the theme's HTML) |
+| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`); the cover page is sized to the image's own dimensions, replacing the text cover |
 | `--timeout` | `""` | Render timeout (e.g. `30s`, `1m`) |
 | `--json` | `false` | Output as JSON |
 | `--no-cover` | `false` | Omit the cover page |
@@ -103,6 +104,7 @@ Before the pipeline starts, `build` verifies:
 - Output directory is writable
 - Custom CSS file exists (if specified)
 - Custom template file exists (if specified)
+- Custom cover image exists and is a supported format (if specified)
 
 ---
 
@@ -117,6 +119,34 @@ pretty-pdf check [flags]
 | Flag | Default | Description |
 |---|---|---|
 | `--strict` | `false` | Treat content warnings as errors |
+
+---
+
+### `epub`
+
+Parse MDX files, validate them, and write a single EPUB 3 file — no
+Chrome/Chromium involved, unlike `build`. Each MDX document becomes its own
+chapter, in the same order as the PDF's table of contents.
+
+```
+pretty-pdf epub [flags]
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--out` | `"out.epub"` | Output EPUB path |
+| `--title` | `""` | Book title |
+| `--subtitle` | `""` | Book subtitle (used as the EPUB's `dc:description`) |
+| `--author` | `""` | Book author |
+| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`), full-bleed as the first page |
+| `--language` | `"en"` | Book language (BCP-47 tag, e.g. `en`, `es`) |
+
+Reuses `--source`/`--config` like every other command, and `render.cover_image`
+from `go-pretty-pdf.yml` if `--cover-image` isn't passed — the same cover
+image works for both `build` and `epub`. Unlike `build`'s `theme`/`css`
+customization (built for print pagination), `epub` ships one bundled,
+reflowable-friendly stylesheet; use the library API (`epub.Options.CSS`) to
+override it programmatically.
 
 ---
 
@@ -326,12 +356,30 @@ render:
 | `margin_left` | `""` | Left margin as CSS unit |
 | `margin_right` | `""` | Right margin as CSS unit |
 | `header_title` | `""` | Header title in rendered PDF |
+| `cover_image` | `""` | Path to a custom cover image (`.png`/`.jpg`/`.jpeg`), or `--cover-image` |
 
 For a full-bleed page (a dark theme's background reaching every edge, no
 white border), set all four margins to `0mm`/`0in` and disable the header
 and page numbers (`theme_options.sections.header`/`page_numbers: false`,
 or `--no-header --no-page-numbers`) — Chrome reserves a small fixed strip
 for the header/footer that can't otherwise be removed.
+
+#### Custom cover image
+
+Setting `render.cover_image` (or `--cover-image`) replaces the theme's
+text cover with a full-bleed page built from that image alone — no title,
+subtitle, or theme styling on it. Unlike every other page, which uses
+`render.paper`, this page is sized to the image's own pixel dimensions
+exactly (at 96px/in): a square image gets a square cover page, a portrait
+photo gets a portrait-shaped page matching its aspect ratio precisely. The
+rest of the document (TOC, sections, page numbers) keeps the configured
+paper size untouched. It always wins over `theme_options.sections.cover`
+and any theme's own cover markup, regardless of which is set first.
+
+```yaml
+render:
+  cover_image: assets/cover.png
+```
 
 ---
 
