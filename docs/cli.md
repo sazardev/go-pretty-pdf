@@ -2,8 +2,7 @@
 
 ## Overview
 
-`pretty-pdf` transforms a directory of MDX files into a print-ready PDF via headless Chrome.
-Documents are sorted by their `[X.Y.Z]` frontmatter ID, not by filename.
+`pretty-pdf` transforms a directory of MDX files into a print-ready PDF and/or a reflowable EPUB 3 file. Documents are sorted by their `[X.Y.Z]` frontmatter ID, not by filename.
 
 GitHub: <https://github.com/sazardev/go-pretty-pdf>
 
@@ -37,7 +36,7 @@ pretty-pdf [command] [flags]
 
 ### `build`
 
-Parse MDX files, validate them, compose HTML, and render to PDF.
+Parse MDX files, validate them, compose HTML, and render to PDF and/or EPUB.
 
 ```
 pretty-pdf build [flags]
@@ -45,15 +44,17 @@ pretty-pdf build [flags]
 
 | Flag | Default | Description |
 |---|---|---|
-| `--out` | `"out.pdf"` | Output PDF path |
+| `--format` | `"pdf"` | Output formats: `pdf`, `epub`, or `pdf,epub` |
+| `--out` | `"out.pdf"` | Output path (extension determines single format; base name for multi-format) |
 | `--title` | `""` | Book title |
 | `--subtitle` | `""` | Book subtitle |
 | `--author` | `""` | Book author |
 | `--theme` | `"default"` | Theme name (builtin, custom, or a `.theme.yml`/`.css` path) — see [Themes](#themes) |
 | `--css` | `""` | Custom CSS file path (overrides the theme entirely) |
 | `--template` | `""` | Custom HTML template file path (overrides the theme's HTML) |
-| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`); the cover page is sized to the image's own dimensions, replacing the text cover |
+| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`/`.svg`/`.webp`); the cover page is sized to the image's own dimensions, replacing the text cover |
 | `--timeout` | `""` | Render timeout (e.g. `30s`, `1m`) |
+| `--language` | `"en"` | EPUB language (BCP-47 tag, e.g. `en`, `es`) |
 | `--json` | `false` | Output as JSON |
 | `--no-cover` | `false` | Omit the cover page |
 | `--no-toc` | `false` | Omit the table of contents |
@@ -72,12 +73,15 @@ pretty-pdf build [flags]
 
 #### Build Pipeline
 
-The `build` command runs through these stages:
+The `build` command runs through these stages per format:
 
 1. **Parse** — Read and parse all MDX files in the source directory
 2. **Validate** — Check frontmatter, duplicate IDs, heading depth, content warnings
-3. **Compose** — Assemble HTML with TOC, cover page, and embedded CSS/template
-4. **Render** — Generate PDF via headless Chrome, then run an automatic quality audit on it
+3. **PDF compose** — Assemble HTML with TOC, cover page, and embedded CSS/template (PDF only)
+4. **PDF render** — Generate PDF via headless Chrome, then run an automatic quality audit (PDF only)
+5. **EPUB write** — Package chapters directly into EPUB 3, no Chrome needed (EPUB only)
+
+Chrome is only required when `pdf` is in the format list. An `epub`-only build (`--format epub`) skips Chrome detection entirely.
 
 #### PDF Quality Audit
 
@@ -96,15 +100,15 @@ The audit reads the composed HTML before it's handed to the print engine, so it 
 
 #### Pre-flight Checks
 
-Before the pipeline starts, `build` verifies:
+Before the pipeline starts, `build` verifies (per selected formats):
 
-- Chrome/Chromium is available
+- Chrome/Chromium is available (only when `pdf` is in the format list)
 - Source directory exists
 - At least one MDX file is present
-- Output directory is writable
+- Each output path's directory is writable
 - Custom CSS file exists (if specified)
 - Custom template file exists (if specified)
-- Custom cover image exists and is a supported format (if specified)
+- Custom cover image exists and is a supported format (`.png`/`.jpg`/`.jpeg`/`.svg`/`.webp`, if specified)
 
 ---
 
@@ -138,15 +142,28 @@ pretty-pdf epub [flags]
 | `--title` | `""` | Book title |
 | `--subtitle` | `""` | Book subtitle (used as the EPUB's `dc:description`) |
 | `--author` | `""` | Book author |
-| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`), full-bleed as the first page |
+| `--theme` | `"default"` | Theme name (theme CSS is converted to reflowable EPUB form) |
+| `--css` | `""` | Custom CSS file path (overrides theme entirely) |
+| `--cover-image` | `""` | Custom cover image (`.png`/`.jpg`/`.jpeg`/`.svg`), full-bleed as the first page |
 | `--language` | `"en"` | Book language (BCP-47 tag, e.g. `en`, `es`) |
+| `--color-primary` | `""` | Theme override: primary color |
+| `--color-accent` | `""` | Theme override: accent color |
+| `--color-text` | `""` | Theme override: body text color |
+| `--color-muted` | `""` | Theme override: muted/caption color |
+| `--color-bg` | `""` | Theme override: page background color |
+| `--font-heading` | `""` | Theme override: heading font family |
+| `--font-body` | `""` | Theme override: body font family |
+| `--font-code` | `""` | Theme override: code font family |
+| `--density` | `""` | Spacing density: `compact`, `normal`, or `relaxed` |
+| `--allow-network-fonts` | `false` | Allow fetching Google Fonts declared by the theme |
 
 Reuses `--source`/`--config` like every other command, and `render.cover_image`
 from `go-pretty-pdf.yml` if `--cover-image` isn't passed — the same cover
-image works for both `build` and `epub`. Unlike `build`'s `theme`/`css`
-customization (built for print pagination), `epub` ships one bundled,
-reflowable-friendly stylesheet; use the library API (`epub.Options.CSS`) to
-override it programmatically.
+image works for both `build` and `epub`. Unlike PDF output — which uses
+`@page` rules and print-oriented layout — EPUB uses the same theme system
+through `ResolveForEPUB`, which produces a reflowable stylesheet (relative
+units, no print-only rules, no cover/TOC/page-number sections) that works
+across e-reader devices.
 
 ---
 
@@ -314,7 +331,7 @@ lint:
 
 render:
   timeout: 30s
-  paper: A4
+  paper: A4            # or: letter, legal, 6x9in, 152.4mm x 228.6mm
   margin_top: 20mm
   margin_bottom: 15mm
   margin_left: 15mm
@@ -330,7 +347,7 @@ render:
 | `subtitle` | `""` | Book subtitle |
 | `author` | `"go-pretty-pdf"` | Book author |
 | `source` | `"book"` | Source MDX directory |
-| `output` | `"out.pdf"` | Output PDF path |
+| `output` | `"out.pdf"` | Output path (extension-added per format when using `--format` from CLI) |
 | `theme` | `""` | Theme name (builtin, custom, or a `.theme.yml`/`.css` path) — see [Themes](#themes) |
 | `css` | `""` | Path to custom CSS file (overrides the theme entirely) |
 | `template` | `""` | Path to custom HTML template file (overrides the theme's HTML) |
@@ -350,13 +367,13 @@ render:
 | Field | Default | Description |
 |---|---|---|
 | `timeout` | `""` | Chrome render timeout (e.g. `30s`, `1m`) |
-| `paper` | `""` | Paper size: `letter`, `legal`, `A4`, or empty for CSS default |
+| `paper` | `""` | Paper size: `letter`, `legal`, `A4`, custom dimensions (`6x9in`, `152.4mm x 228.6mm`, `6x9`), or empty for CSS default |
 | `margin_top` | `""` | Top margin as CSS unit (`20mm`, `1in`, `10mm`, `2cm`, `12pt`, `96px`) |
 | `margin_bottom` | `""` | Bottom margin as CSS unit |
 | `margin_left` | `""` | Left margin as CSS unit |
 | `margin_right` | `""` | Right margin as CSS unit |
 | `header_title` | `""` | Header title in rendered PDF |
-| `cover_image` | `""` | Path to a custom cover image (`.png`/`.jpg`/`.jpeg`), or `--cover-image` |
+| `cover_image` | `""` | Path to a custom cover image (`.png`/`.jpg`/`.jpeg`/`.svg`/`.webp`), or `--cover-image` |
 
 For a full-bleed page (a dark theme's background reaching every edge, no
 white border), set all four margins to `0mm`/`0in` and disable the header
@@ -375,6 +392,9 @@ photo gets a portrait-shaped page matching its aspect ratio precisely. The
 rest of the document (TOC, sections, page numbers) keeps the configured
 paper size untouched. It always wins over `theme_options.sections.cover`
 and any theme's own cover markup, regardless of which is set first.
+
+Supported formats: `.png`, `.jpg`, `.jpeg`, `.svg` (dimensions from
+`width`/`height` attributes or `viewBox`), `.webp`.
 
 ```yaml
 render:
