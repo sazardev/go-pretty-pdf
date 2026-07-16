@@ -7,8 +7,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/sazardev/go-pretty-pdf/cmd/pretty-pdf/output"
+	"github.com/sazardev/go-pretty-pdf/config"
 	"github.com/sazardev/go-pretty-pdf/epub"
 	"github.com/sazardev/go-pretty-pdf/mdx"
+	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
 func runEpub(cmd *cobra.Command, args []string) error {
@@ -53,6 +55,11 @@ func runEpub(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("validation failed with %d error(s)", errorCount)
 	}
 
+	css, err := resolveEpubCSS(cfg)
+	if err != nil {
+		return fmt.Errorf("resolving theme: %w", err)
+	}
+
 	opts := epub.DefaultOptions()
 	if cfg.Title != "" {
 		opts.Title = cfg.Title
@@ -65,6 +72,7 @@ func runEpub(cmd *cobra.Command, args []string) error {
 		opts.Language = epubLanguage
 	}
 	opts.CoverImage = cfg.Render.CoverImage
+	opts.CSS = css
 
 	writeSpinner := output.StartSpinner("Writing EPUB...")
 	if err := epub.Write(docs, opts, epubOutPath); err != nil {
@@ -79,4 +87,44 @@ func runEpub(cmd *cobra.Command, args []string) error {
 	writeSpinner.Done(fmt.Sprintf("Wrote %s (%s)", epubOutPath, size))
 
 	return nil
+}
+
+func resolveEpubCSS(cfg *config.Config) (string, error) {
+	cwd, _ := os.Getwd()
+
+	if cfg.CSS != "" {
+		data, err := os.ReadFile(cfg.CSS)
+		if err != nil {
+			return "", fmt.Errorf("reading CSS file %s: %w", cfg.CSS, err)
+		}
+		return string(data), nil
+	}
+
+	themeName := cfg.Theme
+	if themeName == "" {
+		themeName = defaultTheme
+	}
+
+	return theme.ResolveByNameForEPUB(themeName, themeOptionsFromConfig(cfg), cwd)
+}
+
+func themeOptionsFromConfig(cfg *config.Config) theme.Options {
+	to := cfg.ThemeOptions
+	return theme.Options{
+		Colors: theme.Colors{
+			Primary:    to.Colors.Primary,
+			Accent:     to.Colors.Accent,
+			Text:       to.Colors.Text,
+			Muted:      to.Colors.Muted,
+			Background: to.Colors.Background,
+		},
+		Fonts: theme.Fonts{
+			Heading:       to.Fonts.Heading,
+			Body:          to.Fonts.Body,
+			Code:          to.Fonts.Code,
+			GoogleImports: to.Fonts.GoogleFonts,
+		},
+		Density:           theme.Density(to.Density),
+		AllowNetworkFonts: to.AllowNetworkFonts,
+	}
 }

@@ -62,6 +62,9 @@ var (
 
 	epubOutPath  string
 	epubLanguage string
+
+	formatStr      string
+	buildLanguage  string
 )
 
 var rootCmd = &cobra.Command{
@@ -77,13 +80,19 @@ var rootCmd = &cobra.Command{
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build a PDF from MDX source files",
-	Long: `Parse MDX files, validate them, compose HTML, and render to PDF via headless Chrome.
+	Short: "Build PDF and/or EPUB from MDX source files",
+	Long: `Parse MDX files, validate them, compose HTML, and render to PDF and/or EPUB.
+
+Use --format to pick output formats (comma-separated): pdf, epub, or pdf,epub.
+When --out is a base name (no extension), the appropriate extension is appended
+for each format. Chrome is only required when PDF is in the format list.
 
 Pick a theme with --theme (see 'pretty-pdf theme list'), then customize it
 without writing CSS via --color-*/--font-*/--density, or drop sections with
 --no-cover/--no-toc/--no-page-numbers/--no-header.`,
-	Example: `  pretty-pdf build --theme corporate --color-primary "#0ea5e9"
+	Example: `  pretty-pdf build --format pdf,epub --out mybook
+  pretty-pdf build --format epub --out mybook.epub
+  pretty-pdf build --theme corporate --color-primary "#0ea5e9"
   pretty-pdf build --theme dark --no-cover --no-page-numbers
   pretty-pdf build --theme my-custom-theme --density compact
   pretty-pdf build --css custom.css --template custom.html`,
@@ -158,14 +167,16 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output")
 	rootCmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "suppress non-error output")
 
-	buildCmd.Flags().StringVar(&outPath, "out", "out.pdf", "output PDF path")
+	buildCmd.Flags().StringVar(&outPath, "out", "out.pdf", "output path (base name for multi-format, or single file path)")
+	buildCmd.Flags().StringVar(&formatStr, "format", "pdf", "output format(s): pdf, epub, or pdf,epub")
+	buildCmd.Flags().StringVar(&buildLanguage, "language", "en", "EPUB language (BCP-47 tag, e.g. en, es)")
 	buildCmd.Flags().StringVar(&title, "title", "", "book title")
 	buildCmd.Flags().StringVar(&subtitle, "subtitle", "", "book subtitle")
 	buildCmd.Flags().StringVar(&author, "author", "", "book author")
 	buildCmd.Flags().StringVar(&themeName, "theme", defaultTheme, fmt.Sprintf("book theme (%s, or a custom theme name/path)", strings.Join(themeNames(), ", ")))
 	buildCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path (overrides theme)")
 	buildCmd.Flags().StringVar(&tmplPath, "template", "", "custom HTML template file path (overrides theme)")
-	buildCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg); the cover page is sized to the image's own dimensions, replacing the text cover")
+	buildCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg/.svg/.webp); the cover page is sized to the image's own dimensions, replacing the text cover")
 	buildCmd.Flags().StringVar(&timeoutStr, "timeout", "", "render timeout (e.g. 30s, 1m)")
 	buildCmd.Flags().BoolVar(&jsonOutput, "json", false, "output as JSON")
 
@@ -198,8 +209,21 @@ func init() {
 	epubCmd.Flags().StringVar(&title, "title", "", "book title")
 	epubCmd.Flags().StringVar(&subtitle, "subtitle", "", "book subtitle")
 	epubCmd.Flags().StringVar(&author, "author", "", "book author")
-	epubCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg), full-bleed as the first page")
+	epubCmd.Flags().StringVar(&coverImage, "cover-image", "", "custom cover image (.png/.jpg/.jpeg/.svg), full-bleed as the first page")
 	epubCmd.Flags().StringVar(&epubLanguage, "language", "en", "book language (BCP-47 tag, e.g. en, es)")
+
+	epubCmd.Flags().StringVar(&themeName, "theme", defaultTheme, fmt.Sprintf("book theme (%s, or a custom theme name/path)", strings.Join(themeNames(), ", ")))
+	epubCmd.Flags().StringVar(&cssPath, "css", "", "custom CSS file path (overrides theme)")
+	epubCmd.Flags().StringVar(&colorPrimary, "color-primary", "", "theme override: primary color (e.g. #1a56db)")
+	epubCmd.Flags().StringVar(&colorAccent, "color-accent", "", "theme override: accent color")
+	epubCmd.Flags().StringVar(&colorText, "color-text", "", "theme override: body text color")
+	epubCmd.Flags().StringVar(&colorMuted, "color-muted", "", "theme override: muted/caption text color")
+	epubCmd.Flags().StringVar(&colorBg, "color-bg", "", "theme override: page background color")
+	epubCmd.Flags().StringVar(&fontHeading, "font-heading", "", "theme override: heading font family")
+	epubCmd.Flags().StringVar(&fontBody, "font-body", "", "theme override: body font family")
+	epubCmd.Flags().StringVar(&fontCode, "font-code", "", "theme override: code font family")
+	epubCmd.Flags().StringVar(&density, "density", "", "spacing density: compact, normal, or relaxed")
+	epubCmd.Flags().BoolVar(&allowNetworkFonts, "allow-network-fonts", false, "allow fetching Google Fonts declared by the theme (enables network access)")
 }
 
 func main() {

@@ -4,28 +4,65 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/sazardev/go-pretty-pdf/compose"
 	"github.com/sazardev/go-pretty-pdf/config"
+	"github.com/sazardev/go-pretty-pdf/epub"
 	"github.com/sazardev/go-pretty-pdf/mdx"
 	"github.com/sazardev/go-pretty-pdf/render"
 	"github.com/sazardev/go-pretty-pdf/theme"
 )
 
+type OutputFormat string
+
+const (
+	FormatPDF  OutputFormat = "pdf"
+	FormatEPUB OutputFormat = "epub"
+)
+
+func ParseFormats(s string) ([]OutputFormat, error) {
+	parts := strings.Split(s, ",")
+	seen := map[OutputFormat]bool{}
+	var formats []OutputFormat
+	for _, p := range parts {
+		f := OutputFormat(strings.TrimSpace(p))
+		if f == "" {
+			continue
+		}
+		switch f {
+		case FormatPDF, FormatEPUB:
+		default:
+			return nil, fmt.Errorf("unsupported format %q (supported: pdf, epub)", f)
+		}
+		if !seen[f] {
+			seen[f] = true
+			formats = append(formats, f)
+		}
+	}
+	if len(formats) == 0 {
+		formats = []OutputFormat{FormatPDF}
+	}
+	return formats, nil
+}
+
 type PDF struct {
 	sourceDir       string
 	outputFile      string
+	formats         []OutputFormat
 	parser          *mdx.Parser
 	composeOpts     compose.Options
 	renderOpts      render.Options
+	epubOpts        epub.Options
 	validator       mdx.Validator
 	verbose         bool
 	pendingWarnings []string
 	warnings        []string
 	headerTitleSet  bool
 	lastAudit       *render.AuditReport
+	configErr       error
 }
 
 type ComposeOptions = compose.Options
@@ -49,6 +86,20 @@ func WithSourceDir(dir string) Option {
 func WithOutputFile(path string) Option {
 	return func(p *PDF) {
 		p.outputFile = path
+	}
+}
+
+func WithFormats(formats ...OutputFormat) Option {
+	return func(p *PDF) {
+		if len(formats) > 0 {
+			p.formats = formats
+		}
+	}
+}
+
+func WithEpubLanguage(lang string) Option {
+	return func(p *PDF) {
+		p.epubOpts.Language = lang
 	}
 }
 
@@ -321,9 +372,13 @@ func WithFullConfig(cfg *config.Config) Option {
 			}
 		}
 
-		if w, h, ok := config.ParsePaperSize(cfg.Render.Paper); ok {
-			p.renderOpts.PaperWidth = w
-			p.renderOpts.PaperHeight = h
+		if cfg.Render.Paper != "" {
+			if w, h, ok := config.ParsePaperSize(cfg.Render.Paper); ok {
+				p.renderOpts.PaperWidth = w
+				p.renderOpts.PaperHeight = h
+			} else {
+				p.configErr = fmt.Errorf("invalid paper size %q: use a named size (letter, legal, a4) or custom dimensions (e.g. 6x9in, 152.4mm x 228.6mm)", cfg.Render.Paper)
+			}
 		}
 
 		// Checked per-field on the *string* being non-empty, not on the
@@ -364,9 +419,11 @@ func New(opts ...Option) (*PDF, error) {
 	p := &PDF{
 		sourceDir:   "book",
 		outputFile:  "out.pdf",
+		formats:     []OutputFormat{FormatPDF},
 		parser:      mdx.NewParser(),
 		composeOpts: compose.DefaultOptions(),
 		renderOpts:  render.DefaultOptions(),
+		epubOpts:    epub.DefaultOptions(),
 	}
 
 	for _, o := range opts {
@@ -385,6 +442,19 @@ func New(opts ...Option) (*PDF, error) {
 		p.composeOpts.ShowCover = false
 	}
 
+	if p.epubOpts.Title == "" || p.epubOpts.Title == "Document" {
+		p.epubOpts.Title = p.composeOpts.Title
+	}
+	if p.epubOpts.Subtitle == "" {
+		p.epubOpts.Subtitle = p.composeOpts.Subtitle
+	}
+	if p.epubOpts.Author == "" || p.epubOpts.Author == "go-pretty-pdf" {
+		p.epubOpts.Author = p.composeOpts.Author
+	}
+	if p.renderOpts.CoverImagePath != "" {
+		p.epubOpts.CoverImage = p.renderOpts.CoverImagePath
+	}
+
 	// Always surfaced, not just when verbose: these mark a theme/CSS/
 	// template option that failed to apply and silently fell back to the
 	// previous value, which is worth knowing about regardless of
@@ -397,6 +467,10 @@ func New(opts ...Option) (*PDF, error) {
 	}
 	p.warnings = p.pendingWarnings
 	p.pendingWarnings = nil
+
+	if p.configErr != nil {
+		return nil, p.configErr
+	}
 
 	return p, nil
 }
@@ -455,20 +529,61 @@ func (p *PDF) Build(ctx context.Context) error {
 		return err
 	}
 
-	p.logVerbose("Composing HTML...")
-	html, err := compose.ComposeHTML(docs, p.composeOpts)
-	if err != nil {
-		return fmt.Errorf("composing HTML: %w", err)
+	for _, f := range p.formats {
+		if err = ctx.Err(); err != nil {
+			return err
+		}
+		switch f {
+		case FormatPDF:
+			p.logVerbose("Composing HTML...")
+			html, err := compose.ComposeHTML(docs, p.composeOpts)
+			if err != nil {
+				return fmt.Errorf("composing HTML: %w", err)
+			}
+			p.logVerbose(fmt.Sprintf("Rendering PDF to %s...", p.outputFile))
+			report, err := render.RenderToPDFWithAuditContext(ctx, html, p.outputFile, p.renderOpts)
+			if err != nil {
+				return fmt.Errorf("rendering PDF: %w", err)
+			}
+			p.lastAudit = report
+		case FormatEPUB:
+			epubPath := p.epubOutputPath()
+			p.logVerbose(fmt.Sprintf("Writing EPUB to %s...", epubPath))
+			if err := epub.Write(docs, p.epubOpts, epubPath); err != nil {
+				return fmt.Errorf("writing EPUB: %w", err)
+			}
+		}
 	}
-
-	p.logVerbose(fmt.Sprintf("Rendering PDF to %s...", p.outputFile))
-	report, err := render.RenderToPDFWithAuditContext(ctx, html, p.outputFile, p.renderOpts)
-	if err != nil {
-		return fmt.Errorf("rendering PDF: %w", err)
-	}
-	p.lastAudit = report
 
 	return nil
+}
+
+func (p *PDF) epubOutputPath() string {
+	ext := strings.ToLower(filepath.Ext(p.outputFile))
+	if ext == ".pdf" {
+		return strings.TrimSuffix(p.outputFile, ext) + ".epub"
+	}
+	if ext == ".epub" {
+		return p.outputFile
+	}
+	return p.outputFile + ".epub"
+}
+
+func (p *PDF) Formats() []OutputFormat {
+	return p.formats
+}
+
+func (p *PDF) NeedsChrome() bool {
+	for _, f := range p.formats {
+		if f == FormatPDF {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *PDF) RenderEpub(docs []*mdx.Document, outputPath string) error {
+	return epub.Write(docs, p.epubOpts, outputPath)
 }
 
 func (p *PDF) Validate(ctx context.Context) ([]mdx.ValidationError, error) {

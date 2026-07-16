@@ -1,0 +1,196 @@
+/*
+ * Shared structural skeleton for the EPUB output format.
+ *
+ * Mirrors theme/assets/base.css but uses relative units (em) throughout so
+ * the layout reflows naturally on e-ink screens and resizable reader windows.
+ * Print-only rules (@page, page-break-*, break-*, orphans, widows) and
+ * PDF-only sections (.cover, .toc, .metadata) are omitted — EPUB has its
+ * own cover-image mechanism and nav.xhtml for navigation.
+ *
+ * Uses the same --pdf-* CSS custom property contract as base.css, so every
+ * built-in and custom theme applies to EPUB output without modification.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background: var(--pdf-bg, #ffffff);
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--pdf-font-body, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  font-size: 1em;
+  line-height: var(--pdf-line-height, 1.6);
+  color: var(--pdf-text, #1a1a1a);
+  padding: 0 1em;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--pdf-font-heading, 'Inter', 'General Sans', system-ui, sans-serif);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--pdf-text, #000000);
+}
+
+h1 {
+  font-size: 1.7em;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+}
+
+h2 {
+  font-size: 1.4em;
+  margin-top: calc(1.2em * var(--pdf-space-scale, 1));
+  margin-bottom: 0.5em;
+}
+
+h3 {
+  font-size: 1.2em;
+  margin-top: calc(1em * var(--pdf-space-scale, 1));
+  margin-bottom: 0.4em;
+}
+
+h4 {
+  font-size: 1.05em;
+  margin-top: calc(0.8em * var(--pdf-space-scale, 1));
+  margin-bottom: 0.3em;
+}
+
+h5 {
+  font-size: 1em;
+  margin-top: calc(0.6em * var(--pdf-space-scale, 1));
+  margin-bottom: 0.3em;
+}
+
+p {
+  margin: calc(0.7em * var(--pdf-space-scale, 1)) 0;
+}
+
+code, pre {
+  font-family: var(--pdf-font-code, 'JetBrains Mono', 'Fira Code', 'Consolas', monospace);
+  font-size: 0.9em;
+}
+
+pre {
+  background: var(--pdf-surface, #f5f5f5);
+  border: 1px solid var(--pdf-border, #ddd);
+  border-radius: 0.2em;
+  padding: calc(0.7em * var(--pdf-space-scale, 1)) 0.8em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+code {
+  background: var(--pdf-surface, #f0f0f0);
+  padding: 0.1em 0.3em;
+  border-radius: 0.15em;
+}
+
+.component-deep-dive,
+.component-warning,
+.component-axiom {
+  padding: calc(0.8em * var(--pdf-space-scale, 1)) 1em;
+  margin: calc(1em * var(--pdf-space-scale, 1)) 0;
+  border-radius: 0 0.25em 0.25em 0;
+  font-size: 0.95em;
+}
+
+.component-deep-dive {
+  background: var(--pdf-surface, #f0f4ff);
+  border-left: 4px solid var(--pdf-info, #4a6cf7);
+}
+
+.component-deep-dive-title {
+  margin: 0 0 0.5em 0;
+  font-weight: 600;
+  color: var(--pdf-info, #4a6cf7);
+}
+
+.component-warning {
+  background: var(--pdf-surface, #fff8e6);
+  border-left: 4px solid var(--pdf-warn, #f7a84a);
+}
+
+.component-warning-title {
+  margin: 0 0 0.5em 0;
+  font-weight: 600;
+  color: var(--pdf-warn, #f7a84a);
+}
+
+.component-axiom {
+  background: var(--pdf-surface, #f0faf0);
+  border-left: 4px solid var(--pdf-success, #4caf50);
+  font-style: italic;
+}
+
+.component-axiom-title {
+  margin: 0 0 0.5em 0;
+  font-weight: 600;
+  color: var(--pdf-success, #4caf50);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: calc(0.8em * var(--pdf-space-scale, 1)) 0;
+  font-size: 0.95em;
+}
+
+th, td {
+  border: 1px solid var(--pdf-border, #ccc);
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--pdf-surface, #f0f0f0);
+  font-weight: 600;
+}
+
+tr:nth-child(even) td {
+  background: var(--pdf-surface-2, #fafafa);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--pdf-accent, #4a6cf7);
+  text-decoration: none;
+}
+
+blockquote {
+  margin: calc(0.8em * var(--pdf-space-scale, 1)) 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid var(--pdf-border, #999);
+  color: var(--pdf-muted, #555);
+}
+
+ul, ol {
+  padding-left: 1.5em;
+}
+
+li {
+  margin-bottom: 0.25em;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--pdf-border, #ddd);
+  margin: calc(1.3em * var(--pdf-space-scale, 1)) 0;
+}

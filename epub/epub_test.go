@@ -306,6 +306,80 @@ func TestWriteRejectsUnsupportedCoverFormat(t *testing.T) {
 	}
 }
 
+func TestWriteRejectsWebPCoverFormat(t *testing.T) {
+	dir := t.TempDir()
+	doc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "One", "# One")
+	webpCover := filepath.Join(dir, "cover.webp")
+	if err := os.WriteFile(webpCover, []byte("not a real webp"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := DefaultOptions()
+	opts.CoverImage = webpCover
+
+	err := Write([]*mdx.Document{doc}, opts, filepath.Join(dir, "out.epub"))
+	if err == nil {
+		t.Error("expected an error for WebP cover image (not supported in EPUB 3), got nil")
+	}
+}
+
+func TestWriteAcceptsSVGCoverImage(t *testing.T) {
+	dir := t.TempDir()
+	doc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "One", "# One")
+	svgCover := filepath.Join(dir, "cover.svg")
+	svgContent := `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="red" width="100" height="100"/></svg>`
+	if err := os.WriteFile(svgCover, []byte(svgContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := DefaultOptions()
+	opts.CoverImage = svgCover
+	outPath := filepath.Join(dir, "out.epub")
+
+	if err := Write([]*mdx.Document{doc}, opts, outPath); err != nil {
+		t.Fatalf("Write with SVG cover: %v", err)
+	}
+
+	zr, err := zip.OpenReader(outPath)
+	if err != nil {
+		t.Fatalf("opening EPUB: %v", err)
+	}
+	defer zr.Close()
+
+	found := false
+	for _, f := range zr.File {
+		if f.Name == "OEBPS/images/cover.svg" {
+			found = true
+			rc, err := f.Open()
+			if err != nil {
+				t.Fatalf("opening cover.svg in EPUB: %v", err)
+			}
+			data, _ := io.ReadAll(rc)
+			rc.Close()
+			if string(data) != svgContent {
+				t.Errorf("cover.svg content mismatch")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Error("expected OEBPS/images/cover.svg in EPUB, not found")
+	}
+
+	for _, f := range zr.File {
+		if f.Name == "OEBPS/content.opf" {
+			rc, _ := f.Open()
+			data, _ := io.ReadAll(rc)
+			rc.Close()
+			opf := string(data)
+			if !strings.Contains(opf, `media-type="image/svg+xml"`) {
+				t.Error("expected content.opf to declare image/svg+xml media type for SVG cover")
+			}
+			break
+		}
+	}
+}
+
 // TestWriteFailureDoesNotClobberExistingOutput checks two things: that a
 // failed rebuild leaves a previously-written, valid output file untouched
 // rather than truncated, and that Write's temp-file-then-rename mechanism
@@ -404,5 +478,52 @@ func TestNewUUIDv4LooksLikeAUUID(t *testing.T) {
 	}
 	if id[14] != '4' {
 		t.Errorf("expected version nibble '4' at position 14, got %q", id)
+	}
+}
+
+func TestWriteEmbedsCustomCSS(t *testing.T) {
+	dir := t.TempDir()
+	doc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "Chapter One", "# Chapter One\n\nHello.")
+	outPath := filepath.Join(dir, "out.epub")
+
+	customCSS := "/* custom-theme */ body { color: #ff0000; }"
+	opts := DefaultOptions()
+	opts.CSS = customCSS
+
+	if err := Write([]*mdx.Document{doc}, opts, outPath); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	files := readZip(t, outPath)
+	cssData, ok := files["OEBPS/css/style.css"]
+	if !ok {
+		t.Fatal("expected OEBPS/css/style.css in EPUB archive")
+	}
+	if !strings.Contains(string(cssData), "custom-theme") {
+		t.Error("expected custom CSS to be embedded in style.css")
+	}
+	if !strings.Contains(string(cssData), "color: #ff0000") {
+		t.Error("expected custom CSS content to be preserved")
+	}
+}
+
+func TestWriteUsesDefaultCSSWhenOptionsCSSEmpty(t *testing.T) {
+	dir := t.TempDir()
+	doc := mustParseDoc(t, dir, "a.mdx", "[1.0.0]", "Chapter One", "# Chapter One\n\nHello.")
+	outPath := filepath.Join(dir, "out.epub")
+
+	opts := DefaultOptions()
+
+	if err := Write([]*mdx.Document{doc}, opts, outPath); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	files := readZip(t, outPath)
+	cssData, ok := files["OEBPS/css/style.css"]
+	if !ok {
+		t.Fatal("expected OEBPS/css/style.css in EPUB archive")
+	}
+	if !strings.Contains(string(cssData), "--pdf-bg") {
+		t.Error("expected default CSS to use CSS custom properties")
 	}
 }

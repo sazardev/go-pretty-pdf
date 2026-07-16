@@ -355,6 +355,40 @@ func TestWithFullConfigExplicitZeroMargin(t *testing.T) {
 	}
 }
 
+func TestWithFullConfigCustomPaperSize(t *testing.T) {
+	cfg := &config.Config{
+		Source: testSourceDir,
+		Render: config.RenderConfig{
+			Paper: "6x9in",
+		},
+	}
+
+	p, err := New(WithFullConfig(cfg))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.renderOpts.PaperWidth != 6 || p.renderOpts.PaperHeight != 9 {
+		t.Errorf("expected 6x9 paper size, got %vx%v", p.renderOpts.PaperWidth, p.renderOpts.PaperHeight)
+	}
+}
+
+func TestWithFullConfigInvalidPaperSize(t *testing.T) {
+	cfg := &config.Config{
+		Source: testSourceDir,
+		Render: config.RenderConfig{
+			Paper: "tabloid",
+		},
+	}
+
+	_, err := New(WithFullConfig(cfg))
+	if err == nil {
+		t.Fatal("expected error for invalid paper size, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid paper size") {
+		t.Errorf("expected error to mention 'invalid paper size', got %q", err.Error())
+	}
+}
+
 func TestWithCoverImageForcesShowCoverFalse(t *testing.T) {
 	// WithCoverImage must win over the theme's text cover regardless of
 	// the order options were applied in: a theme resolved *after*

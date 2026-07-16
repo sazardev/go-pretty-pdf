@@ -70,6 +70,40 @@ func (c *CustomTheme) Resolve(opts Options) (string, ResolvedSections, error) {
 	return css, sections, nil
 }
 
+// ResolveForEPUB builds the final EPUB CSS for a custom theme. Same merge
+// semantics as Resolve, but uses the EPUB structural skeleton instead of
+// the PDF one and does not return ResolvedSections.
+func (c *CustomTheme) ResolveForEPUB(opts Options) (string, error) {
+	extends := c.Extends
+	if extends == "" {
+		extends = NameDefault
+	}
+	base, ok := Get(extends)
+	if !ok {
+		return "", fmt.Errorf("custom theme %q extends unknown base theme %q", c.Name, extends)
+	}
+
+	merged := Options{
+		Colors:            mergeColors(c.Colors, opts.Colors),
+		Fonts:             mergeFonts(c.Fonts, opts.Fonts),
+		Sections:          mergeSectionOverrides(c.Sections, opts.Sections),
+		Density:           opts.Density,
+		AllowNetworkFonts: opts.AllowNetworkFonts,
+	}
+	if merged.Density == "" {
+		merged.Density = c.Density
+	}
+
+	css, err := ResolveForEPUB(base, merged)
+	if err != nil {
+		return "", err
+	}
+	if c.CSS != "" {
+		css += "\n" + c.CSS
+	}
+	return css, nil
+}
+
 func mergeColors(base, override Colors) Colors {
 	return Colors{
 		Primary:    firstNonEmpty(override.Primary, base.Primary),

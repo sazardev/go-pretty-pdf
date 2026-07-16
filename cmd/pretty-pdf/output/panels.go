@@ -20,7 +20,11 @@ type BuildStats struct {
 func PrintBuildSummary(stats BuildStats) {
 	var lines []string
 	lines = append(lines, KeyValue("Documents", NumberStyle.Render(fmt.Sprintf("%d", stats.Documents))))
-	lines = append(lines, KeyValue("Output", fmt.Sprintf("%s (%s)", stats.Output, stats.FileSize)))
+	if stats.FileSize != "" {
+		lines = append(lines, KeyValue("Output", fmt.Sprintf("%s (%s)", stats.Output, stats.FileSize)))
+	} else {
+		lines = append(lines, KeyValue("Output", stats.Output))
+	}
 	lines = append(lines, KeyValue("Duration", stats.Duration.Round(time.Millisecond).String()))
 	if stats.Theme != "" {
 		lines = append(lines, KeyValue("Theme", stats.Theme))

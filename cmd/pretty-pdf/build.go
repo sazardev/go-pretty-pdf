@@ -32,11 +32,29 @@ func runBuild(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	formats, err := prettypdf.ParseFormats(formatStr)
+	if err != nil {
+		return err
+	}
+
+	outputPaths := resolveOutputPaths(cfg.Output, formats)
+
 	output.PrintBanner(version.Version)
 
-	chromeExecPath, chromeErr := resolveChromePath()
+	var chromeExecPath string
+	var chromeErr error
+	needsChrome := false
+	for _, f := range formats {
+		if f == prettypdf.FormatPDF {
+			needsChrome = true
+			break
+		}
+	}
+	if needsChrome {
+		chromeExecPath, chromeErr = resolveChromePath()
+	}
 
-	preflightResults := runPreFlight(cfg, chromeExecPath, chromeErr)
+	preflightResults := runPreFlight(cfg, chromeExecPath, chromeErr, needsChrome, outputPaths)
 	output.PrintPreFlight(preflightResults)
 
 	failed := false
@@ -55,21 +73,24 @@ func runBuild(cmd *cobra.Command, args []string) error {
 			fmt.Println("  " + output.MutedStyle.Render("Config: "+cfgFile))
 		}
 		fmt.Println("  " + output.KeyValue("Source", cfg.Source))
-		fmt.Println("  " + output.KeyValue("Output", cfg.Output))
+		for _, p := range outputPaths {
+			fmt.Println("  " + output.KeyValue("Output", p))
+		}
+		fmt.Println("  " + output.KeyValue("Format", formatLabel(formats)))
 		fmt.Println()
 	}
 
-	pipeline := output.NewPipelineProgress(
-		"Parsing MDX files...",
-		"Running validation...",
-		"Composing HTML...",
-		"Rendering PDF...",
-	)
+	steps := buildStepNames(formats)
+	pipeline := output.NewPipelineProgress(steps...)
 
 	startTime := time.Now()
 
 	pipeline.Start("Parsing MDX files...")
 	opts := buildOpts(cfg, chromeExecPath)
+	opts = append(opts, prettypdf.WithFormats(formats...))
+	if buildLanguage != "" {
+		opts = append(opts, prettypdf.WithEpubLanguage(buildLanguage))
+	}
 	pdf, err := prettypdf.New(opts...)
 	if err != nil {
 		pipeline.Fail("Parsing MDX files...", err.Error())
@@ -101,45 +122,71 @@ func runBuild(cmd *cobra.Command, args []string) error {
 	}
 	pipeline.Done("Running validation...")
 
-	pipeline.Start("Composing HTML...")
-	html, err := pdf.ComposeHTML(docs)
-	if err != nil {
-		pipeline.Fail("Composing HTML...", err.Error())
-		return fmt.Errorf("composing HTML: %w", err)
-	}
-	pipeline.Done("Composing HTML...")
+	for _, f := range formats {
+		switch f {
+		case prettypdf.FormatPDF:
+			pdfPath := outputPaths[prettypdf.FormatPDF]
+			pipeline.Start("Composing HTML...")
+			html, err := pdf.ComposeHTML(docs)
+			if err != nil {
+				pipeline.Fail("Composing HTML...", err.Error())
+				return fmt.Errorf("composing HTML: %w", err)
+			}
+			pipeline.Done("Composing HTML...")
 
-	pipeline.Start("Rendering PDF...")
-	if err := pdf.Render(html); err != nil {
-		pipeline.Fail("Rendering PDF...", err.Error())
-		return fmt.Errorf("rendering PDF: %w", err)
+			pipeline.Start("Rendering PDF...")
+			pdfOpt := prettypdf.WithOutputFile(pdfPath)
+			pdfOpt(pdf)
+			if err := pdf.Render(html); err != nil {
+				pipeline.Fail("Rendering PDF...", err.Error())
+				return fmt.Errorf("rendering PDF: %w", err)
+			}
+			pipeline.Done("Rendering PDF...")
+
+		case prettypdf.FormatEPUB:
+			epubPath := outputPaths[prettypdf.FormatEPUB]
+			pipeline.Start("Writing EPUB...")
+			if err := pdf.RenderEpub(docs, epubPath); err != nil {
+				pipeline.Fail("Writing EPUB...", err.Error())
+				return fmt.Errorf("writing EPUB: %w", err)
+			}
+			pipeline.Done("Writing EPUB...")
+		}
 	}
-	pipeline.Done("Rendering PDF...")
 
 	elapsed := time.Since(startTime)
-
-	fileSize := "unknown"
-	if info, err := os.Stat(cfg.Output); err == nil {
-		fileSize = formatBytes(info.Size())
-	}
 
 	themeLabel := cfg.Theme
 	if themeLabel == "" {
 		themeLabel = defaultTheme
 	}
 
+	var outputLines []string
+	for _, f := range formats {
+		path := outputPaths[f]
+		fileSize := "unknown"
+		if info, err := os.Stat(path); err == nil {
+			fileSize = formatBytes(info.Size())
+		}
+		outputLines = append(outputLines, fmt.Sprintf("%s (%s)", path, fileSize))
+	}
+
 	audit := pdf.LastAudit()
+	warningCount := 0
+	if audit != nil {
+		warningCount = len(audit.Issues)
+	}
 
 	output.PrintBuildSummary(output.BuildStats{
 		Documents: len(docs),
-		Output:    cfg.Output,
-		FileSize:  fileSize,
+		Output:    strings.Join(outputLines, ", "),
+		FileSize:  "",
 		Duration:  elapsed,
 		Theme:     themeLabel,
-		Warnings:  len(audit.Issues),
+		Warnings:  warningCount,
 	})
 
-	if audit.HasIssues() {
+	if audit != nil && audit.HasIssues() {
 		fmt.Println()
 		fmt.Println("  " + output.MutedStyle.Render("PDF quality checks flagged:"))
 		for _, issue := range audit.Issues {
@@ -155,10 +202,15 @@ type buildJSONWarning struct {
 	Message string `json:"message"`
 }
 
+type buildJSONOutput struct {
+	Format    string `json:"format"`
+	Path      string `json:"path"`
+	SizeBytes int64  `json:"size_bytes"`
+}
+
 type buildJSONResult struct {
 	Documents  int                `json:"documents"`
-	Output     string             `json:"output"`
-	SizeBytes  int64              `json:"size_bytes"`
+	Outputs    []buildJSONOutput  `json:"outputs"`
 	DurationMs int64              `json:"duration_ms"`
 	Theme      string             `json:"theme"`
 	Warnings   []buildJSONWarning `json:"warnings"`
@@ -170,12 +222,34 @@ func runBuildJSON(cmd *cobra.Command) error {
 		return err
 	}
 
-	chromeExecPath, err := resolveChromePath()
+	formats, err := prettypdf.ParseFormats(formatStr)
 	if err != nil {
-		return fmt.Errorf("resolving Chrome: %w", err)
+		return err
+	}
+
+	outputPaths := resolveOutputPaths(cfg.Output, formats)
+
+	needsChrome := false
+	for _, f := range formats {
+		if f == prettypdf.FormatPDF {
+			needsChrome = true
+			break
+		}
+	}
+
+	var chromeExecPath string
+	if needsChrome {
+		chromeExecPath, err = resolveChromePath()
+		if err != nil {
+			return fmt.Errorf("resolving Chrome: %w", err)
+		}
 	}
 
 	opts := buildOpts(cfg, chromeExecPath)
+	opts = append(opts, prettypdf.WithFormats(formats...))
+	if buildLanguage != "" {
+		opts = append(opts, prettypdf.WithEpubLanguage(buildLanguage))
+	}
 	pdf, err := prettypdf.New(opts...)
 	if err != nil {
 		return err
@@ -199,31 +273,56 @@ func runBuildJSON(cmd *cobra.Command) error {
 		return fmt.Errorf("validation failed: %d error(s)", len(allErrs))
 	}
 
-	html, err := pdf.ComposeHTML(docs)
-	if err != nil {
-		return fmt.Errorf("composing HTML: %w", err)
-	}
-
-	if err = pdf.Render(html); err != nil {
-		return fmt.Errorf("rendering PDF: %w", err)
+	for _, f := range formats {
+		switch f {
+		case prettypdf.FormatPDF:
+			pdfPath := outputPaths[prettypdf.FormatPDF]
+			html, err := pdf.ComposeHTML(docs)
+			if err != nil {
+				return fmt.Errorf("composing HTML: %w", err)
+			}
+			pdfOpt := prettypdf.WithOutputFile(pdfPath)
+			pdfOpt(pdf)
+			if err = pdf.Render(html); err != nil {
+				return fmt.Errorf("rendering PDF: %w", err)
+			}
+		case prettypdf.FormatEPUB:
+			epubPath := outputPaths[prettypdf.FormatEPUB]
+			if err := pdf.RenderEpub(docs, epubPath); err != nil {
+				return fmt.Errorf("writing EPUB: %w", err)
+			}
+		}
 	}
 
 	elapsed := time.Since(startTime)
-	var fileSize int64
-	if info, statErr := os.Stat(cfg.Output); statErr == nil {
-		fileSize = info.Size()
+
+	outputs := make([]buildJSONOutput, 0, len(formats))
+	for _, f := range formats {
+		path := outputPaths[f]
+		var fileSize int64
+		if info, statErr := os.Stat(path); statErr == nil {
+			fileSize = info.Size()
+		}
+		outputs = append(outputs, buildJSONOutput{
+			Format:    string(f),
+			Path:      filepath.ToSlash(path),
+			SizeBytes: fileSize,
+		})
 	}
 
-	audit := pdf.LastAudit()
-	warnings := make([]buildJSONWarning, 0, len(audit.Issues))
-	for _, issue := range audit.Issues {
-		warnings = append(warnings, buildJSONWarning{Check: issue.Check, Message: issue.Message})
+	var warnings []buildJSONWarning
+	if audit := pdf.LastAudit(); audit != nil {
+		for _, issue := range audit.Issues {
+			warnings = append(warnings, buildJSONWarning{Check: issue.Check, Message: issue.Message})
+		}
+	}
+	if warnings == nil {
+		warnings = []buildJSONWarning{}
 	}
 
 	out, err := json.Marshal(buildJSONResult{
 		Documents:  len(docs),
-		Output:     filepath.ToSlash(cfg.Output),
-		SizeBytes:  fileSize,
+		Outputs:    outputs,
 		DurationMs: elapsed.Milliseconds(),
 		Theme:      cfg.Theme,
 		Warnings:   warnings,
@@ -263,27 +362,29 @@ func resolveChromePath() (string, error) {
 	return path, nil
 }
 
-func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error) []output.PreFlightResult {
+func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error, needsChrome bool, outputPaths map[prettypdf.OutputFormat]string) []output.PreFlightResult {
 	var results []output.PreFlightResult
 
-	if chromeErr != nil {
-		results = append(results, output.PreFlightResult{
-			Name:    "Chrome/Chromium available",
-			Passed:  false,
-			Message: chromeErr.Error(),
-		})
-	} else {
-		name := "Chrome/Chromium available"
-		switch {
-		case chromePath != "":
-			name = "Chrome/Chromium available (--chrome-path)"
-		case chromeExecPath != "":
-			name = "Chrome/Chromium available (auto-downloaded)"
+	if needsChrome {
+		if chromeErr != nil {
+			results = append(results, output.PreFlightResult{
+				Name:    "Chrome/Chromium available",
+				Passed:  false,
+				Message: chromeErr.Error(),
+			})
+		} else {
+			name := "Chrome/Chromium available"
+			switch {
+			case chromePath != "":
+				name = "Chrome/Chromium available (--chrome-path)"
+			case chromeExecPath != "":
+				name = "Chrome/Chromium available (auto-downloaded)"
+			}
+			results = append(results, output.PreFlightResult{
+				Name:   name,
+				Passed: true,
+			})
 		}
-		results = append(results, output.PreFlightResult{
-			Name:   name,
-			Passed: true,
-		})
 	}
 
 	srcInfo, err := os.Stat(cfg.Source)
@@ -316,32 +417,29 @@ func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error) []
 		}
 	}
 
-	outDir := filepath.Dir(cfg.Output)
-	if outDir != "." {
-		if _, err := os.Stat(outDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(outDir, 0755); err != nil {
-				results = append(results, output.PreFlightResult{
-					Name:    outputDirWritable,
-					Passed:  false,
-					Message: fmt.Sprintf("cannot create %s: %v", outDir, err),
-				})
+	for _, outPath := range outputPaths {
+		outDir := filepath.Dir(outPath)
+		if outDir != "." {
+			if _, err := os.Stat(outDir); os.IsNotExist(err) {
+				if err := os.MkdirAll(outDir, 0755); err != nil {
+					results = append(results, output.PreFlightResult{
+						Name:    fmt.Sprintf("Output directory writable (%s)", outPath),
+						Passed:  false,
+						Message: fmt.Sprintf("cannot create %s: %v", outDir, err),
+					})
+				} else {
+					results = append(results, output.PreFlightResult{
+						Name:   fmt.Sprintf("Output directory writable (%s)", outPath),
+						Passed: true,
+					})
+				}
 			} else {
 				results = append(results, output.PreFlightResult{
-					Name:   outputDirWritable,
+					Name:   fmt.Sprintf("Output path writable (%s)", outPath),
 					Passed: true,
 				})
 			}
-		} else {
-			results = append(results, output.PreFlightResult{
-				Name:   outputDirWritable,
-				Passed: true,
-			})
 		}
-	} else {
-		results = append(results, output.PreFlightResult{
-			Name:   "Output path writable",
-			Passed: true,
-		})
 	}
 
 	if cfg.CSS != "" {
@@ -383,6 +481,69 @@ func runPreFlight(cfg *config.Config, chromeExecPath string, chromeErr error) []
 	return results
 }
 
+func resolveOutputPaths(out string, formats []prettypdf.OutputFormat) map[prettypdf.OutputFormat]string {
+	paths := make(map[prettypdf.OutputFormat]string)
+	ext := strings.ToLower(filepath.Ext(out))
+
+	switch ext {
+	case ".pdf":
+		base := strings.TrimSuffix(out, ext)
+		for _, f := range formats {
+			switch f {
+			case prettypdf.FormatPDF:
+				paths[f] = out
+			case prettypdf.FormatEPUB:
+				paths[f] = base + ".epub"
+			}
+		}
+	case ".epub":
+		base := strings.TrimSuffix(out, ext)
+		for _, f := range formats {
+			switch f {
+			case prettypdf.FormatPDF:
+				paths[f] = base + ".pdf"
+			case prettypdf.FormatEPUB:
+				paths[f] = out
+			}
+		}
+	default:
+		for _, f := range formats {
+			switch f {
+			case prettypdf.FormatPDF:
+				paths[f] = out + ".pdf"
+			case prettypdf.FormatEPUB:
+				paths[f] = out + ".epub"
+			}
+		}
+	}
+
+	return paths
+}
+
+func buildStepNames(formats []prettypdf.OutputFormat) []string {
+	steps := []string{
+		"Parsing MDX files...",
+		"Running validation...",
+	}
+	for _, f := range formats {
+		switch f {
+		case prettypdf.FormatPDF:
+			steps = append(steps, "Composing HTML...", "Rendering PDF...")
+		case prettypdf.FormatEPUB:
+			steps = append(steps, "Writing EPUB...")
+		}
+	}
+	return steps
+}
+
+func formatLabel(formats []prettypdf.OutputFormat) string {
+	labels := make([]string, len(formats))
+	for i, f := range formats {
+		labels[i] = string(f)
+	}
+	return strings.Join(labels, ", ")
+}
+
 func coverImagePreFlight(path string) output.PreFlightResult {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -400,12 +561,12 @@ func coverImagePreFlight(path string) output.PreFlightResult {
 		}
 	}
 	switch strings.ToLower(filepath.Ext(path)) {
-	case ".png", ".jpg", ".jpeg":
+	case ".png", ".jpg", ".jpeg", ".svg", ".webp":
 	default:
 		return output.PreFlightResult{
 			Name:    coverImageExists,
 			Passed:  false,
-			Message: fmt.Sprintf("%s: unsupported format (expected .png, .jpg, or .jpeg)", path),
+			Message: fmt.Sprintf("%s: unsupported format (expected .png, .jpg, .jpeg, .svg, or .webp)", path),
 		}
 	}
 	return output.PreFlightResult{
