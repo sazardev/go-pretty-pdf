@@ -8,11 +8,15 @@ import (
 
 var cssUnitRe = regexp.MustCompile(`^(-?[0-9]*\.?[0-9]+)\s*([a-zA-Z]+)$`)
 
+var customPaperRe = regexp.MustCompile(`^(-?[0-9]*\.?[0-9]+)\s*([a-zA-Z]*)\s*x\s*(-?[0-9]*\.?[0-9]+)\s*([a-zA-Z]*)$`)
+
 // PaperLetter is the config value for US Letter paper size.
 const PaperLetter = "letter"
 
 // ParsePaperSize maps a named paper size to its width/height in inches.
-// ok is false for unrecognized names, leaving width/height unchanged.
+// Named sizes: "letter", "legal", "a4" (case-insensitive).
+// Custom dimensions: "6x9", "6x9in", "6in x 9in", "152.4mm x 228.6mm".
+// Bare numbers default to inches. ok is false for unrecognized input.
 func ParsePaperSize(name string) (width, height float64, ok bool) {
 	switch strings.ToLower(name) {
 	case PaperLetter:
@@ -21,9 +25,30 @@ func ParsePaperSize(name string) (width, height float64, ok bool) {
 		return 8.5, 14, true
 	case "a4":
 		return 8.27, 11.69, true
-	default:
+	}
+
+	m := customPaperRe.FindStringSubmatch(name)
+	if m == nil {
 		return 0, 0, false
 	}
+
+	wStr, wUnit := m[1], m[2]
+	hStr, hUnit := m[3], m[4]
+
+	if wUnit == "" {
+		wUnit = "in"
+	}
+	if hUnit == "" {
+		hUnit = "in"
+	}
+
+	w := ParseCSSUnit(wStr + wUnit)
+	h := ParseCSSUnit(hStr + hUnit)
+	if w <= 0 || h <= 0 {
+		return 0, 0, false
+	}
+
+	return w, h, true
 }
 
 // ParseCSSUnit converts a CSS length string (e.g. "20mm", "0.8in") to

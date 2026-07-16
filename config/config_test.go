@@ -174,6 +174,34 @@ render:
 	}
 }
 
+func TestLoadCustomPaperSize(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "go-pretty-pdf.yml")
+	content := `title: "Trade Paperback"
+render:
+  paper: "6x9in"
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Render.Paper != "6x9in" {
+		t.Errorf("expected paper '6x9in', got %q", cfg.Render.Paper)
+	}
+
+	w, h, ok := ParsePaperSize(cfg.Render.Paper)
+	if !ok {
+		t.Fatal("expected ParsePaperSize to succeed for '6x9in'")
+	}
+	if w != 6 || h != 9 {
+		t.Errorf("expected 6x9 inches, got %vx%v", w, h)
+	}
+}
+
 func TestLoadDefaultsOnMissingKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "go-pretty-pdf.yml")

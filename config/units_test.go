@@ -12,13 +12,32 @@ func TestParsePaperSize(t *testing.T) {
 		{PaperLetter, 8.5, 11, true},
 		{"Legal", 8.5, 14, true},
 		{"A4", 8.27, 11.69, true},
+		{"6x9", 6, 9, true},
+		{"6x9in", 6, 9, true},
+		{"6in x 9in", 6, 9, true},
+		{"6.0x9.0", 6, 9, true},
+		{"5.5x8.5", 5.5, 8.5, true},
+		{"152.4mm x 228.6mm", 6, 9, true},
 		{"tabloid", 0, 0, false},
 		{"", 0, 0, false},
+		{"6x", 0, 0, false},
+		{"6x9x12", 0, 0, false},
+		{"abc", 0, 0, false},
 	}
 	for _, tt := range tests {
 		w, h, ok := ParsePaperSize(tt.name)
-		if ok != tt.wantOK || w != tt.wantW || h != tt.wantH {
-			t.Errorf("ParsePaperSize(%q) = (%v, %v, %v), want (%v, %v, %v)", tt.name, w, h, ok, tt.wantW, tt.wantH, tt.wantOK)
+		if ok != tt.wantOK {
+			t.Errorf("ParsePaperSize(%q) ok = %v, want %v", tt.name, ok, tt.wantOK)
+			continue
+		}
+		if !ok {
+			continue
+		}
+		if diff := w - tt.wantW; diff < -0.01 || diff > 0.01 {
+			t.Errorf("ParsePaperSize(%q) width = %v, want %v", tt.name, w, tt.wantW)
+		}
+		if diff := h - tt.wantH; diff < -0.01 || diff > 0.01 {
+			t.Errorf("ParsePaperSize(%q) height = %v, want %v", tt.name, h, tt.wantH)
 		}
 	}
 }

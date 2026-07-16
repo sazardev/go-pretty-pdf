@@ -17,4 +17,6 @@ lint:
 
 render:
   timeout: 60s
+  # Named sizes: letter, legal, a4
+  # Custom dimensions: 6x9in, 6x9, 6in x 9in, 152.4mm x 228.6mm
   paper: a4
