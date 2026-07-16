@@ -251,3 +251,114 @@ func TestRenderToPDFWithCoverImageRejectsUnsupportedFormat(t *testing.T) {
 		t.Error("expected an error for an unsupported cover image format, got nil")
 	}
 }
+
+func writeTestSVG(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("writing test SVG: %v", err)
+	}
+	return path
+}
+
+func TestSVGPixelDimensionsWithWidthHeight(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480"></svg>`)
+
+	w, h, err := coverImageDimensionsIn(path)
+	if err != nil {
+		t.Fatalf("coverImageDimensionsIn: %v", err)
+	}
+	if w != 10 || h != 5 {
+		t.Errorf("got %v x %v, want 10 x 5 (960x480px at 96px/in)", w, h)
+	}
+}
+
+func TestSVGPixelDimensionsWithViewBox(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 960"></svg>`)
+
+	w, h, err := coverImageDimensionsIn(path)
+	if err != nil {
+		t.Fatalf("coverImageDimensionsIn: %v", err)
+	}
+	if w != 20 || h != 10 {
+		t.Errorf("got %v x %v, want 20 x 10 (1920x960 from viewBox at 96px/in)", w, h)
+	}
+}
+
+func TestSVGPixelDimensionsWithInches(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg" width="10in" height="5in"></svg>`)
+
+	w, h, err := coverImageDimensionsIn(path)
+	if err != nil {
+		t.Fatalf("coverImageDimensionsIn: %v", err)
+	}
+	if w != 10 || h != 5 {
+		t.Errorf("got %v x %v, want 10 x 5 (10in x 5in at 96px/in)", w, h)
+	}
+}
+
+func TestSVGPixelDimensionsWidthHeightOverridesViewBox(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 1920 960"></svg>`)
+
+	w, h, err := coverImageDimensionsIn(path)
+	if err != nil {
+		t.Fatalf("coverImageDimensionsIn: %v", err)
+	}
+	if w != 10 || h != 5 {
+		t.Errorf("got %v x %v, want 10 x 5 (width/height should take precedence over viewBox)", w, h)
+	}
+}
+
+func TestSVGPixelDimensionsFallsBackToViewBoxForRelativeUnits(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 480 240"></svg>`)
+
+	w, h, err := coverImageDimensionsIn(path)
+	if err != nil {
+		t.Fatalf("coverImageDimensionsIn: %v", err)
+	}
+	if w != 5 || h != 2.5 {
+		t.Errorf("got %v x %v, want 5 x 2.5 (should fall back to viewBox for %% units)", w, h)
+	}
+}
+
+func TestSVGPixelDimensionsRejectsNoDimensions(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTestSVG(t, dir, "cover.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg"></svg>`)
+
+	if _, _, err := coverImageDimensionsIn(path); err == nil {
+		t.Error("expected an error for SVG with no dimensions or viewBox, got nil")
+	}
+}
+
+func TestCoverImageMIMEType(t *testing.T) {
+	tests := []struct {
+		path string
+		want string
+	}{
+		{"cover.png", "image/png"},
+		{"cover.PNG", "image/png"},
+		{"cover.jpg", "image/jpeg"},
+		{"cover.jpeg", "image/jpeg"},
+		{"cover.JPEG", "image/jpeg"},
+		{"cover.svg", "image/svg+xml"},
+		{"cover.SVG", "image/svg+xml"},
+		{"cover.webp", "image/webp"},
+		{"cover.WEBP", "image/webp"},
+	}
+	for _, tt := range tests {
+		if got := coverImageMIMEType(tt.path); got != tt.want {
+			t.Errorf("coverImageMIMEType(%q) = %q, want %q", tt.path, got, tt.want)
+		}
+	}
+}

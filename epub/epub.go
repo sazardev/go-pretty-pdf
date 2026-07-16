@@ -214,8 +214,10 @@ func loadCoverImage(path string) (data []byte, file, mediaType string, err error
 		mediaType = "image/png"
 	case ".jpg", ".jpeg":
 		mediaType = "image/jpeg"
+	case ".svg":
+		mediaType = "image/svg+xml"
 	default:
-		return nil, "", "", fmt.Errorf("cover image %s: unsupported format (expected .png, .jpg, or .jpeg)", path)
+		return nil, "", "", fmt.Errorf("cover image %s: unsupported format (expected .png, .jpg, .jpeg, or .svg)", path)
 	}
 
 	data, err = os.ReadFile(path)
